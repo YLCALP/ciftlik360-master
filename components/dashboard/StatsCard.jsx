@@ -26,7 +26,6 @@ export function StatsCard({ title, value, subtitle, icon, valueColor, onPress })
           <View style={styles.iconContainer}>
             <Text style={styles.icon}>{icon}</Text>
           </View>
-          <Text style={styles.arrow}>→</Text>
         </View>
         
         <View style={styles.middleSection}>
@@ -66,19 +65,15 @@ const getStyles = (theme) => StyleSheet.create({
     alignItems: 'center',
   },
   iconContainer: {
-    width: 48,
-    height: 48,
+    width: 50,
+    height: 50,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.spacing.radius.xl,
     justifyContent: 'center',
     alignItems: 'center',
   },
   icon: {
-    fontSize: 24,
-  },
-  arrow: {
-    fontSize: 18,
-    color: theme.colors.textMuted,
+    fontSize: 30,
   },
   middleSection: {
     flex: 1,
@@ -87,6 +82,7 @@ const getStyles = (theme) => StyleSheet.create({
   value: {
     ...theme.typography.styles.h1,
     color: theme.colors.text,
+    marginLeft: 6,
   },
   valueMedium: {
     fontSize: theme.typography.sizes['3xl'],

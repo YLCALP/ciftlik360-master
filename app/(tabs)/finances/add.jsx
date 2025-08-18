@@ -1,30 +1,30 @@
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { router, useLocalSearchParams } from 'expo-router';
+import { Formik } from 'formik';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Yup from 'yup';
 import { FlashMessageService } from '../../../components/common/FlashMessage';
+import FormikDatePickerField from '../../../components/forms/FormikDatePickerField';
 import { animalsAPI, feedAPI, financialAPI } from '../../../services/api';
 import { useTheme } from '../../../themes/useTheme';
 
 export default function AddFinancialTransactionScreen() {
-  const params = useLocalSearchParams();
+  const routeParams = useLocalSearchParams();
+  const initialTypeParam = 'type' in routeParams ? String(routeParams.type) : undefined;
+  const initialCategoryParam = 'category' in routeParams ? String(routeParams.category) : undefined;
+  const initialAnimalIdParam = 'animalId' in routeParams ? String(routeParams.animalId) : undefined;
+  const initialFeedIdParam = 'feedId' in routeParams ? String(routeParams.feedId) : undefined;
   const theme = useTheme();
-  const [transactionType, setTransactionType] = useState(params.type || 'expense'); // income, expense
-  const [category, setCategory] = useState(params.category || '');
-  const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
-  const [date, setDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedAnimal, setSelectedAnimal] = useState(null);
   const [animals, setAnimals] = useState([]);
   const [showAnimalPicker, setShowAnimalPicker] = useState(false);
@@ -35,6 +35,8 @@ export default function AddFinancialTransactionScreen() {
   const [quantity, setQuantity] = useState('');
   const [pricePerUnit, setPricePerUnit] = useState('');
   const [loading, setLoading] = useState(false);
+  const [categorySearch, setCategorySearch] = useState('');
+  const [animalSearch, setAnimalSearch] = useState('');
 
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -70,33 +72,33 @@ export default function AddFinancialTransactionScreen() {
 
   useEffect(() => {
     // URL parametrelerinden geldiğinde seçili hayvanı ayarla
-    if (params.animalId && animals.length > 0) {
-      const animal = animals.find(a => a.id === params.animalId);
+    if (initialAnimalIdParam && animals.length > 0) {
+      const animal = animals.find(a => a.id === initialAnimalIdParam);
       if (animal) {
         setSelectedAnimal(animal);
       }
     }
-  }, [params.animalId, animals]);
+  }, [initialAnimalIdParam, animals]);
 
   useEffect(() => {
     // URL parametrelerinden geldiğinde seçili yemi ayarla
-    if (params.feedId && feeds.length > 0) {
-      const feed = feeds.find(f => f.id === params.feedId);
+    if (initialFeedIdParam && feeds.length > 0) {
+      const feed = feeds.find(f => f.id === initialFeedIdParam);
       if (feed) {
         setSelectedFeed(feed);
       }
     }
-  }, [params.feedId, feeds]);
+  }, [initialFeedIdParam, feeds]);
 
   useEffect(() => {
     // Kategori değiştiğinde seçili item'ları sıfırla (parametreden gelmiyorsa)
-    if (!params.animalId) {
+    if (!initialAnimalIdParam) {
       setSelectedAnimal(null);
     }
-    if (!params.feedId) {
+    if (!initialFeedIdParam) {
       setSelectedFeed(null);
     }
-  }, [category, params.animalId, params.feedId]);
+  }, [initialAnimalIdParam, initialFeedIdParam]);
 
   const loadAnimals = async () => {
     try {
@@ -116,125 +118,104 @@ export default function AddFinancialTransactionScreen() {
     }
   };
 
-  const getCurrentCategories = () => {
-    return transactionType === 'income' ? incomeCategories : expenseCategories;
+  const getCurrentCategories = (type) => {
+    return type === 'income' ? incomeCategories : expenseCategories;
   };
 
-  const getCategoryLabel = (value) => {
-    const categories = getCurrentCategories();
+  const getCategoryLabel = (value, type) => {
+    const categories = getCurrentCategories(type);
     const category = categories.find(cat => cat.value === value);
     return category ? category.label : 'Kategori seçin...';
   };
 
-  const isAnimalRequired = () => {
-    return ['animal_purchase', 'animal_sale'].includes(category);
-  };
+  const isAnimalRequired = (category) => ['animal_purchase', 'animal_sale'].includes(category);
 
-  const isFeedRequired = () => {
-    return ['feed_purchase'].includes(category);
-  };
+  const isFeedRequired = (category) => ['feed_purchase'].includes(category);
 
-  const isFeedPurchase = () => {
-    return category === 'feed_purchase';
-  };
+  const isFeedPurchase = (category) => category === 'feed_purchase';
 
-  // Yem alımında toplam tutarı hesapla
-  useEffect(() => {
-    if (isFeedPurchase() && quantity && pricePerUnit) {
-      const total = parseFloat(quantity) * parseFloat(pricePerUnit);
-      if (!isNaN(total)) {
-        setAmount(total.toString());
-      }
-    }
-  }, [quantity, pricePerUnit, category]);
+  // Input yardımcıları
+  function getISODate(d) {
+    return new Date(d).toISOString().split('T')[0];
+  }
 
-  const validateForm = () => {
-    const { description, transaction_type, animal_id, feed_id, quantity, unit_price, amount } = formData;
+  // Formik + Yup şeması
+  const TransactionSchema = Yup.object().shape({
+    type: Yup.string().oneOf(['income', 'expense']).required('İşlem türü zorunludur'),
+    category: Yup.string().required('Kategori zorunludur'),
+    date: Yup.mixed().required('Tarih zorunludur'),
+    description: Yup.string().max(500).nullable(),
+    animal_id: Yup.string().nullable().when('category', (cat, schema) =>
+      ['animal_sale', 'animal_purchase'].includes(cat) ? schema.required('Hayvan seçimi zorunludur') : schema
+    ),
+    feed_id: Yup.string().nullable().when('category', (cat, schema) =>
+      cat === 'feed_purchase' ? schema.required('Yem seçimi zorunludur') : schema
+    ),
+    quantity: Yup.number().nullable().when('category', (cat, schema) =>
+      cat === 'feed_purchase' ? schema.typeError('Miktar sayı olmalı').required('Miktar zorunludur') : schema.nullable()
+    ),
+    unit_price: Yup.number().nullable().when('category', (cat, schema) =>
+      cat === 'feed_purchase' ? schema.typeError('Birim fiyat sayı olmalı').required('Birim fiyat zorunludur') : schema.nullable()
+    ),
+    amount: Yup.number().nullable().when('category', (cat, schema) =>
+      cat !== 'feed_purchase' ? schema.typeError('Tutar sayı olmalı').required('Tutar zorunludur') : schema.nullable()
+    ),
+  });
 
-    if (!description.trim() || !transaction_type) {
-      FlashMessageService.error('Hata', 'Lütfen gerekli alanları doldurun');
-      return false;
-    }
-
-    if (['yem_alimi', 'hayvan_satisi'].includes(transaction_type) && !animal_id) {
-      FlashMessageService.error('Hata', 'Bu işlem türü için hayvan seçimi zorunludur');
-      return false;
-    }
-
-    if (transaction_type === 'yem_alimi' && !feed_id) {
-      FlashMessageService.error('Hata', 'Bu işlem türü için yem seçimi zorunludur');
-      return false;
-    }
-
-    if (transaction_type === 'yem_alimi') {
-      if (!quantity || !unit_price) {
-        FlashMessageService.error('Hata', 'Yem alımı için miktar ve birim fiyat gereklidir');
-        return false;
-      }
-      
-      if (isNaN(parseFloat(quantity)) || isNaN(parseFloat(unit_price))) {
-        FlashMessageService.error('Hata', 'Geçerli miktar ve birim fiyat girin');
-        return false;
-      }
-    } else {
-      if (!amount) {
-        FlashMessageService.error('Hata', 'Tutar gereklidir');
-        return false;
-      }
-      
-      if (isNaN(parseFloat(amount))) {
-        FlashMessageService.error('Hata', 'Geçerli bir tutar girin');
-        return false;
-      }
-    }
-
-    return true;
-  };
-
-  const handleSave = async () => {
-    if (!validateForm()) return;
-
+  async function handleSubmit(values, { setSubmitting }) {
     setLoading(true);
     try {
-      let finalAmount = 0;
-      
-      if (formData.transaction_type === 'yem_alimi') {
-        finalAmount = parseFloat(formData.quantity) * parseFloat(formData.unit_price);
+      const isFeed = isFeedPurchase(values.category);
+      const finalAmount = isFeed
+        ? parseFloat(values.quantity) * parseFloat(values.unit_price)
+        : parseFloat(values.amount);
+
+      const isoDate = getISODate(values.date);
+
+      if (values.category === 'animal_sale' && values.animal_id) {
+        await financialAPI.recordAnimalSale(values.animal_id, {
+          amount: finalAmount,
+          description: values.description?.trim() || '',
+          date: isoDate,
+        });
       } else {
-        finalAmount = parseFloat(formData.amount);
+        await financialAPI.recordTransaction({
+          type: values.type,
+          category: values.category,
+          amount: finalAmount,
+          description: values.description?.trim() || '',
+          date: isoDate,
+          animal_id: values.animal_id || null,
+          feed_id: values.feed_id || null,
+          quantity: values.quantity ? parseFloat(values.quantity) : null,
+          unit_price: values.unit_price ? parseFloat(values.unit_price) : null,
+        });
       }
 
-      const transactionData = {
-        ...formData,
-        amount: finalAmount,
-        quantity: formData.quantity ? parseFloat(formData.quantity) : null,
-        unit_price: formData.unit_price ? parseFloat(formData.unit_price) : null,
-        animal_id: formData.animal_id || null,
-        feed_id: formData.feed_id || null,
-      };
-
-      await financialAPI.addTransaction(transactionData);
-      
       FlashMessageService.success('Başarılı', 'İşlem kaydedildi');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      setTimeout(() => router.back(), 600);
     } catch (error) {
       console.error('Create transaction error:', error);
       FlashMessageService.error('Hata', 'İşlem kaydedilirken hata oluştu: ' + error.message);
     } finally {
+      setSubmitting(false);
       setLoading(false);
     }
+  }
+
+  const initialValues = {
+    type: initialTypeParam || 'expense',
+    category: initialCategoryParam || '',
+    amount: '',
+    description: '',
+    date: new Date(),
+    animal_id: initialAnimalIdParam || null,
+    feed_id: initialFeedIdParam || null,
+    quantity: '',
+    unit_price: '',
   };
 
-  const onDateChange = (event, selectedDate) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      setDate(selectedDate);
-    }
-  };
-
-  const CategoryPickerModal = () => (
+  const CategoryPickerModal = ({ selectedType, selectedCategory, onSelect }) => (
     <Modal
       visible={showCategoryPicker}
       transparent={true}
@@ -248,34 +229,50 @@ export default function AddFinancialTransactionScreen() {
               <Ionicons name="close" size={24} color={theme.colors.text} />
             </TouchableOpacity>
           </View>
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={18} color={theme.colors.textMuted} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Kategori ara..."
+              placeholderTextColor={theme.colors.textMuted}
+              value={categorySearch}
+              onChangeText={setCategorySearch}
+            />
+          </View>
           <ScrollView style={styles.categoryList}>
-            {getCurrentCategories().map((cat) => (
-              <TouchableOpacity
-                key={cat.value}
-                style={[
-                  styles.categoryItem,
-                  category === cat.value && styles.categoryItemSelected
-                ]}
-                onPress={() => {
-                  setCategory(cat.value);
-                  setShowCategoryPicker(false);
-                }}
-              >
-                <Text style={[
-                  styles.categoryText,
-                  category === cat.value && styles.categoryTextSelected
-                ]}>
-                  {cat.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {getCurrentCategories(selectedType)
+              .filter(c => c.label.toLowerCase().includes(categorySearch.toLowerCase()))
+              .map((cat) => (
+                <TouchableOpacity
+                  key={cat.value}
+                  style={[
+                    styles.categoryItem,
+                    selectedCategory === cat.value && styles.categoryItemSelected
+                  ]}
+                  onPress={() => {
+                    onSelect(cat.value);
+                    setShowCategoryPicker(false);
+                    setCategorySearch('');
+                  }}
+                >
+                  <Text style={[
+                    styles.categoryText,
+                    selectedCategory === cat.value && styles.categoryTextSelected
+                  ]}>
+                    {cat.label}
+                  </Text>
+                  {selectedCategory === cat.value && (
+                    <Ionicons name="checkmark" size={20} color={theme.colors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
           </ScrollView>
         </View>
       </View>
     </Modal>
   );
 
-  const AnimalPickerModal = () => (
+  const AnimalPickerModal = ({ onSelect, currentAnimalId }) => (
     <Modal
       visible={showAnimalPicker}
       transparent={true}
@@ -289,33 +286,54 @@ export default function AddFinancialTransactionScreen() {
               <Ionicons name="close" size={24} color={theme.colors.text} />
             </TouchableOpacity>
           </View>
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={18} color={theme.colors.textMuted} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Küpe no / ad ara..."
+              placeholderTextColor={theme.colors.textMuted}
+              value={animalSearch}
+              onChangeText={setAnimalSearch}
+            />
+          </View>
           <ScrollView style={styles.animalList}>
-            {animals.map((animal) => (
-              <TouchableOpacity
-                key={animal.id}
-                style={[
-                  styles.animalItem,
-                  selectedAnimal?.id === animal.id && styles.animalItemSelected
-                ]}
-                onPress={() => {
-                  setSelectedAnimal(animal);
-                  setShowAnimalPicker(false);
-                }}
-              >
-                <View>
-                  <Text style={styles.animalTag}>{animal.tag_number}</Text>
-                  <Text style={styles.animalName}>{animal.name || 'İsimsiz'}</Text>
-                  <Text style={styles.animalSpecies}>{animal.species} - {animal.breed}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+            {animals
+              .filter(a =>
+                `${a.tag_number} ${a.name ?? ''}`
+                  .toLowerCase()
+                  .includes(animalSearch.toLowerCase())
+              )
+              .map((animal) => (
+                <TouchableOpacity
+                  key={animal.id}
+                  style={[
+                    styles.animalItem,
+                    (selectedAnimal?.id === animal.id || currentAnimalId === animal.id) && styles.animalItemSelected
+                  ]}
+                  onPress={() => {
+                    setSelectedAnimal(animal);
+                    onSelect(animal.id);
+                    setShowAnimalPicker(false);
+                    setAnimalSearch('');
+                  }}
+                >
+                  <View>
+                    <Text style={styles.animalTag}>{animal.tag_number}</Text>
+                    <Text style={styles.animalName}>{animal.name || 'İsimsiz'}</Text>
+                    <Text style={styles.animalSpecies}>{animal.species} - {animal.breed}</Text>
+                  </View>
+                  {(selectedAnimal?.id === animal.id || currentAnimalId === animal.id) && (
+                    <Ionicons name="checkmark" size={20} color={theme.colors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
           </ScrollView>
         </View>
       </View>
     </Modal>
   );
 
-  const FeedPickerModal = () => (
+  const FeedPickerModal = ({ onSelect, currentFeedId }) => (
     <Modal
       visible={showFeedPicker}
       transparent={true}
@@ -335,10 +353,11 @@ export default function AddFinancialTransactionScreen() {
                 key={feed.id}
                 style={[
                   styles.feedItem,
-                  selectedFeed?.id === feed.id && styles.feedItemSelected
+                  (selectedFeed?.id === feed.id || currentFeedId === feed.id) && styles.feedItemSelected
                 ]}
                 onPress={() => {
                   setSelectedFeed(feed);
+                  onSelect(feed.id);
                   setShowFeedPicker(false);
                 }}
               >
@@ -363,216 +382,204 @@ export default function AddFinancialTransactionScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView 
-        style={styles.content}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <Formik
+        initialValues={initialValues}
+        validationSchema={TransactionSchema}
+        onSubmit={handleSubmit}
       >
-        {/* Transaction Type */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>İşlem Türü</Text>
-          <View style={styles.typeButtons}>
-            <TouchableOpacity
-              style={[
-                styles.typeButton,
-                transactionType === 'income' && styles.typeButtonActive
-              ]}
-              onPress={() => {
-                setTransactionType('income');
-                setCategory('');
-              }}
-            >
-              <Text style={[
-                styles.typeButtonText,
-                transactionType === 'income' && styles.typeButtonTextActive
-              ]}>
-                Gelir
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.typeButton,
-                transactionType === 'expense' && styles.typeButtonActive
-              ]}
-              onPress={() => {
-                setTransactionType('expense');
-                setCategory('');
-              }}
-            >
-              <Text style={[
-                styles.typeButtonText,
-                transactionType === 'expense' && styles.typeButtonTextActive
-              ]}>
-                Gider
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Category */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Kategori *</Text>
-          <TouchableOpacity
-            style={styles.categorySelector}
-            onPress={() => setShowCategoryPicker(true)}
+        {({ values, errors, touched, setFieldValue, handleSubmit }) => (
+          <ScrollView 
+            style={styles.content}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
           >
-            <Text style={[
-              styles.categorySelectorText,
-              !category && styles.placeholder
-            ]}>
-              {getCategoryLabel(category)}
-            </Text>
-            <Ionicons name="chevron-down" size={20} color={theme.colors.textMuted} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Animal Selection (if required) */}
-        {isAnimalRequired() && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Hayvan *</Text>
-            <TouchableOpacity
-              style={styles.animalSelector}
-              onPress={() => setShowAnimalPicker(true)}
-            >
-              <Text style={[
-                styles.animalSelectorText,
-                !selectedAnimal && styles.placeholder
-              ]}>
-                {selectedAnimal 
-                  ? `${selectedAnimal.tag_number} - ${selectedAnimal.name || 'İsimsiz'}`
-                  : 'Hayvan seçin...'
-                }
-              </Text>
-              <Ionicons name="chevron-down" size={20} color={theme.colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Feed Selection (if required) */}
-        {isFeedRequired() && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Yem *</Text>
-            <TouchableOpacity
-              style={styles.feedSelector}
-              onPress={() => setShowFeedPicker(true)}
-            >
-              <Text style={[
-                styles.feedSelectorText,
-                !selectedFeed && styles.placeholder
-              ]}>
-                {selectedFeed ? selectedFeed.feed_name : 'Yem seçin...'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color={theme.colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Feed Purchase Specific Fields */}
-        {isFeedPurchase() && (
-          <>
+            {/* Transaction Type */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Miktar ({selectedFeed?.unit || 'kg'}) *</Text>
+              <Text style={styles.sectionTitle}>İşlem Türü</Text>
+              <View style={styles.typeButtons}>
+                <TouchableOpacity
+                  style={[styles.typeButton, values.type === 'income' && styles.typeButtonActive]}
+                  onPress={() => {
+                    setFieldValue('type', 'income');
+                    setFieldValue('category', '');
+                  }}
+                >
+                  <Text style={[styles.typeButtonText, values.type === 'income' && styles.typeButtonTextActive]}>Gelir</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.typeButton, values.type === 'expense' && styles.typeButtonActive]}
+                  onPress={() => {
+                    setFieldValue('type', 'expense');
+                    setFieldValue('category', '');
+                  }}
+                >
+                  <Text style={[styles.typeButtonText, values.type === 'expense' && styles.typeButtonTextActive]}>Gider</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Category */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Kategori *</Text>
+              <TouchableOpacity
+                style={styles.categorySelector}
+                onPress={() => setShowCategoryPicker(true)}
+              >
+                <Text style={[styles.categorySelectorText, !values.category && styles.placeholder]}>
+                  {getCategoryLabel(values.category, values.type)}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={theme.colors.textMuted} />
+              </TouchableOpacity>
+              {touched.category && errors.category && (
+                <Text style={styles.helpText}>{errors.category}</Text>
+              )}
+            </View>
+
+            {/* Animal Selection (if required) */}
+            {isAnimalRequired(values.category) && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Hayvan *</Text>
+                <TouchableOpacity
+                  style={styles.animalSelector}
+                  onPress={() => setShowAnimalPicker(true)}
+                >
+                  <Text style={[styles.animalSelectorText, !selectedAnimal && styles.placeholder]}>
+                    {selectedAnimal 
+                      ? `${selectedAnimal.tag_number} - ${selectedAnimal.name || 'İsimsiz'}`
+                      : 'Hayvan seçin...'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={20} color={theme.colors.textMuted} />
+                </TouchableOpacity>
+                {touched.animal_id && errors.animal_id && (
+                  <Text style={styles.helpText}>{errors.animal_id}</Text>
+                )}
+              </View>
+            )}
+
+            {/* Feed Selection (if required) */}
+            {isFeedRequired(values.category) && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Yem *</Text>
+                <TouchableOpacity
+                  style={styles.feedSelector}
+                  onPress={() => setShowFeedPicker(true)}
+                >
+                  <Text style={[styles.feedSelectorText, !selectedFeed && styles.placeholder]}>
+                    {selectedFeed ? selectedFeed.feed_name : 'Yem seçin...'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={20} color={theme.colors.textMuted} />
+                </TouchableOpacity>
+                {touched.feed_id && errors.feed_id && (
+                  <Text style={styles.helpText}>{errors.feed_id}</Text>
+                )}
+              </View>
+            )}
+
+            {/* Feed Purchase Specific Fields */}
+            {isFeedPurchase(values.category) && (
+              <>
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Miktar ({selectedFeed?.unit || 'kg'}) *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={values.quantity}
+                    onChangeText={(t) => setFieldValue('quantity', t)}
+                    placeholder="0"
+                    keyboardType="numeric"
+                  />
+                </View>
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Birim Fiyat (₺/{selectedFeed?.unit || 'kg'}) *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={values.unit_price}
+                    onChangeText={(t) => setFieldValue('unit_price', t)}
+                    placeholder="0.00"
+                    keyboardType="numeric"
+                  />
+                </View>
+                {(values.quantity && values.unit_price) && (
+                  <Text style={styles.helpText}>
+                    Otomatik hesaplanan: {values.quantity} × {values.unit_price} = {Number(values.quantity) * Number(values.unit_price) || 0}
+                  </Text>
+                )}
+              </>
+            )}
+
+            {/* Amount */}
+            {!isFeedPurchase(values.category) && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Tutar (₺) *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={values.amount}
+                  onChangeText={(t) => setFieldValue('amount', t)}
+                  placeholder="0.00"
+                  keyboardType="numeric"
+                />
+              </View>
+            )}
+
+            {/* Date */}
+            <View style={styles.section}>
+              <FormikDatePickerField name="date" label="Tarih *" />
+            </View>
+
+            {/* Description */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Açıklama</Text>
               <TextInput
-                style={styles.input}
-                value={quantity}
-                onChangeText={setQuantity}
-                placeholder="0"
-                keyboardType="numeric"
+                style={[styles.input, styles.textArea]}
+                value={values.description}
+                onChangeText={(t) => setFieldValue('description', t)}
+                placeholder="İsteğe bağlı açıklama..."
+                multiline
+                numberOfLines={3}
               />
             </View>
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Birim Fiyat (₺/{selectedFeed?.unit || 'kg'}) *</Text>
-              <TextInput
-                style={styles.input}
-                value={pricePerUnit}
-                onChangeText={setPricePerUnit}
-                placeholder="0.00"
-                keyboardType="numeric"
-              />
+
+            {/* Save Button - ScrollView içinde */}
+            <View style={styles.saveButtonContainer}>
+              <TouchableOpacity
+                style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+                onPress={handleSubmit}
+                disabled={loading}
+              >
+                <Text style={styles.saveButtonText}>
+                  {loading ? 'Kaydediliyor...' : 'Kaydet'}
+                </Text>
+              </TouchableOpacity>
             </View>
-          </>
+
+            {/* Category Picker Modal */}
+            {showCategoryPicker && (
+              <CategoryPickerModal
+                selectedType={values.type}
+                selectedCategory={values.category}
+                onSelect={(val) => setFieldValue('category', val)}
+              />
+            )}
+            {/* Animal Picker Modal */}
+            {showAnimalPicker && (
+              <AnimalPickerModal
+                currentAnimalId={values.animal_id}
+                onSelect={(id) => setFieldValue('animal_id', id)}
+              />
+            )}
+            {/* Feed Picker Modal */}
+            {showFeedPicker && (
+              <FeedPickerModal
+                currentFeedId={values.feed_id}
+                onSelect={(id) => setFieldValue('feed_id', id)}
+              />
+            )}
+
+            {/* Modallarda seçim eventleri */}
+          </ScrollView>
         )}
+      </Formik>
 
-        {/* Amount */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            {isFeedPurchase() ? 'Toplam Tutar (₺)' : 'Tutar (₺) *'}
-          </Text>
-          <TextInput
-            style={[styles.input, isFeedPurchase() && styles.inputReadonly]}
-            value={amount}
-            onChangeText={setAmount}
-            placeholder="0.00"
-            keyboardType="numeric"
-            editable={!isFeedPurchase()}
-          />
-          {isFeedPurchase() && (
-            <Text style={styles.helpText}>
-              Otomatik hesaplanan: {quantity} × {pricePerUnit} = {amount}
-            </Text>
-          )}
-        </View>
-
-        {/* Date */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tarih *</Text>
-          <TouchableOpacity
-            style={styles.dateButton}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text style={styles.dateButtonText}>
-              {date.toLocaleDateString('tr-TR')}
-            </Text>
-            <Ionicons name="calendar-outline" size={20} color={theme.colors.textMuted} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Description */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Açıklama</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="İsteğe bağlı açıklama..."
-            multiline
-            numberOfLines={3}
-          />
-        </View>
-
-        {/* Save Button - ScrollView içinde */}
-        <View style={styles.saveButtonContainer}>
-          <TouchableOpacity
-            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-            onPress={handleSave}
-            disabled={loading}
-          >
-            <Text style={styles.saveButtonText}>
-              {loading ? 'Kaydediliyor...' : 'Kaydet'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-      </ScrollView>
-
-      {/* Date Picker */}
-      {showDatePicker && (
-        <DateTimePicker
-          value={date}
-          mode="date"
-          display="default"
-          onChange={onDateChange}
-        />
-      )}
-
-      {/* Category Picker Modal */}
-      <CategoryPickerModal />
-
-      {/* Animal Picker Modal */}
-      <AnimalPickerModal />
-
-      {/* Feed Picker Modal */}
-      <FeedPickerModal />
+      {/* Modallar bileşen içinde render ediliyor */}
     </SafeAreaView>
   );
 }

@@ -105,7 +105,8 @@ export const Colors = {
     // Background colors
     background: BLACK,
     surface: GRAY_900,
-   // card: GRAY_800,
+    card: BLACK,  
+    cardBackground: WHITE,
     // Text colors
     text: WHITE,
     textSecondary: GRAY_300,

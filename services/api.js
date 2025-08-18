@@ -232,10 +232,10 @@ export const financialAPI = {
 
       let query = supabase
         .from('transactions')
-        .select(`
-          *,
-          animals:animal_id(tag_number, name, species)
-        `)
+        .select(
+          `id, type, category, amount, description, date, created_at, animal_id,
+           animals:animal_id(tag_number, name, species)`
+        )
         .eq('user_id', user.id);
 
       // Filtreleri uygula
@@ -252,7 +252,24 @@ export const financialAPI = {
         query = query.lte('date', filters.endDate);
       }
 
-      const { data, error } = await query.order('date', { ascending: false });
+      if (filters.startDate) {
+        query = query.gte('date', filters.startDate);
+      }
+      if (filters.endDate) {
+        query = query.lte('date', filters.endDate);
+      }
+      // Sayfalama: offset + limit birlikte gönderilirse range kullan
+      if (typeof filters.offset === 'number' && typeof filters.limit === 'number') {
+        const from = Math.max(0, filters.offset);
+        const to = Math.max(from, from + filters.limit - 1);
+        query = query.range(from, to);
+      } else if (filters.limit) {
+        query = query.limit(filters.limit);
+      }
+
+      const { data, error } = await query
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Supabase query error:', error);
@@ -304,10 +321,21 @@ export const financialAPI = {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      // Sadece şemada kesin var olan alanları gönder
+      const allowed = {
+        type: transactionData.type,
+        category: transactionData.category,
+        amount: transactionData.amount,
+        description: transactionData.description,
+        date: transactionData.date,
+        animal_id: transactionData.animal_id || null,
+        feed_id: transactionData.feed_id || null,
+      };
+
       const fullTransactionData = {
-        ...transactionData,
+        ...allowed,
         user_id: user.id,
-        is_automatic: false
+        is_automatic: false,
       };
 
       const { data, error } = await supabase

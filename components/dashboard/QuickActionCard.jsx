@@ -25,7 +25,6 @@ export function QuickActionCard({ title, description, icon, color, onPress }) {
       </View>
       
       <View style={styles.arrow}>
-        <Text style={styles.arrowText}>→</Text>
       </View>
     </TouchableOpacity>
   );

@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Yup from 'yup';
 import { FlashMessageService } from '../../../components/common/FlashMessage';
+import FormikDatePickerField from '../../../components/forms/FormikDatePickerField';
 import FormikSelectorGrid from '../../../components/forms/FormikSelectorGrid';
 import FormSubmitButton from '../../../components/forms/FormSubmitButton';
 import FormTextInput from '../../../components/forms/FormTextInput';
@@ -119,8 +120,8 @@ export default function AddFeedScreen() {
 
                             <View style={styles.section}>
                                 <Text style={styles.sectionTitle}>Tarihler</Text>
-                                <FormTextInput name="purchase_date" label="Alış Tarihi" placeholder="GG.AA.YYYY" />
-                                <FormTextInput name="expiry_date" label="Son Kullanma Tarihi" placeholder="GG.AA.YYYY" />
+                                <FormikDatePickerField name="purchase_date" label="Alış Tarihi" asString />
+                                <FormikDatePickerField name="expiry_date" label="Son Kullanma Tarihi" asString />
                             </View>
 
                             <View style={styles.section}>

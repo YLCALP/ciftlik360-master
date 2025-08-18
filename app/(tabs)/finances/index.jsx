@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashMessageService } from '../../../components/common/FlashMessage';
+import DatePickerField from '../../../components/forms/DatePickerField';
 import { useAuth } from '../../../contexts/AuthContext';
 import { financialAPI } from '../../../services/api';
 import { useTheme } from '../../../themes/useTheme';
@@ -27,11 +28,19 @@ export default function FinancesScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [period, setPeriod] = useState('month'); // 'month' | 'year'
+  const [customRange, setCustomRange] = useState({ start: null, end: null });
+  const [showRangePicker, setShowRangePicker] = useState(false);
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 30;
+  const [rangeDraftStart, setRangeDraftStart] = useState(null);
+  const [rangeDraftEnd, setRangeDraftEnd] = useState(null);
 
   const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const loadFinancialData = useCallback(async () => {
+  const loadFinancialData = useCallback(async (reset = false) => {
     try {
+      if (reset) setPage(0);
       setLoading(true);
       
       const filters = {};
@@ -41,16 +50,26 @@ export default function FinancesScreen() {
 
       console.log('Loading financial data with filters:', filters);
 
-      // Ay başından bugüne kadar
+      // Dönem başlangıç-bitiş
       const today = new Date();
-      const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      const startDate = firstDayOfMonth.toISOString().split('T')[0];
-      const endDate = today.toISOString().split('T')[0];
+      let startDate;
+      let endDate;
+      if (customRange.start && customRange.end) {
+        startDate = new Date(customRange.start).toISOString().split('T')[0];
+        endDate = new Date(customRange.end).toISOString().split('T')[0];
+      } else {
+        const start = period === 'year'
+          ? new Date(today.getFullYear(), 0, 1)
+          : new Date(today.getFullYear(), today.getMonth(), 1);
+        startDate = start.toISOString().split('T')[0];
+        endDate = today.toISOString().split('T')[0];
+      }
 
       console.log('Date range:', startDate, 'to', endDate);
 
+      const offset = reset ? 0 : page * PAGE_SIZE;
       const [transactionsData, reportData] = await Promise.all([
-        financialAPI.getTransactions(filters),
+        financialAPI.getTransactions({ ...filters, startDate, endDate, offset, limit: PAGE_SIZE }),
         financialAPI.getFinancialReport(startDate, endDate)
       ]);
 
@@ -58,7 +77,18 @@ export default function FinancesScreen() {
       console.log('Sample transaction:', transactionsData?.[0]);
       console.log('Report data:', reportData);
 
-      setTransactions(transactionsData || []);
+      // Güvenli taraf: sunucu sıralasa da, istemci tarafında da son kontrol sıralama
+      const newPageData = (transactionsData || []).sort((a, b) => {
+        const ad = new Date(a.date).getTime();
+        const bd = new Date(b.date).getTime();
+        if (bd !== ad) return bd - ad;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+      if (reset) {
+        setTransactions(newPageData);
+      } else {
+        setTransactions(prev => [...prev, ...newPageData]);
+      }
       setSummary({
         totalIncome: reportData?.totalIncome || 0,
         totalExpense: reportData?.totalExpense || 0,
@@ -71,22 +101,28 @@ export default function FinancesScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedFilter]);
+  }, [selectedFilter, period, customRange, page]);
 
   // Sayfa her açıldığında verileri otomatik yenile
   useFocusEffect(
     useCallback(() => {
-      loadFinancialData();
-    }, [loadFinancialData])
+      loadFinancialData(true);
+    }, [selectedFilter, period, customRange])
   );
 
   useEffect(() => {
-    loadFinancialData();
-  }, [loadFinancialData]);
+    loadFinancialData(true);
+  }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadFinancialData();
+    setPage(0);
+    loadFinancialData(true).finally(() => setRefreshing(false));
+  };
+
+  const loadMore = () => {
+    if (loading) return;
+    setPage(prev => prev + 1);
   };
 
   const getCategoryDisplayName = (category) => {
@@ -183,6 +219,23 @@ export default function FinancesScreen() {
     </TouchableOpacity>
   );
 
+  const PeriodButton = ({ value, title }) => (
+    <TouchableOpacity
+      style={[
+        styles.filterButton,
+        period === value && styles.filterButtonActive
+      ]}
+      onPress={() => setPeriod(value)}
+    >
+      <Text style={[
+        styles.filterButtonText,
+        period === value && styles.filterButtonTextActive
+      ]}>
+        {title}
+      </Text>
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -216,7 +269,7 @@ export default function FinancesScreen() {
           <View style={styles.summaryCard}>
             <View style={styles.summaryCardHeader}>
               <Ionicons name="trending-up" size={24} color={theme.colors.success} />
-              <Text style={styles.summaryLabel}>Aylık Gelir</Text>
+              <Text style={styles.summaryLabel}>{period === 'year' ? 'Yıllık Gelir' : 'Aylık Gelir'}</Text>
             </View>
             <Text style={styles.summaryAmount}>{formatAmount(summary.totalIncome)}</Text>
           </View>
@@ -224,7 +277,7 @@ export default function FinancesScreen() {
           <View style={styles.summaryCard}>
             <View style={styles.summaryCardHeader}>
               <Ionicons name="trending-down" size={24} color={theme.colors.error} />
-              <Text style={styles.summaryLabel}>Aylık Gider</Text>
+              <Text style={styles.summaryLabel}>{period === 'year' ? 'Yıllık Gider' : 'Aylık Gider'}</Text>
             </View>
             <Text style={styles.summaryAmount}>{formatAmount(summary.totalExpense)}</Text>
           </View>
@@ -236,7 +289,7 @@ export default function FinancesScreen() {
                 size={24} 
                 color={summary.totalProfit >= 0 ? theme.colors.success : theme.colors.error} 
               />
-              <Text style={styles.summaryLabel}>Net Kâr/Zarar</Text>
+              <Text style={styles.summaryLabel}>{period === 'year' ? 'Yıllık Net Kâr/Zarar' : 'Net Kâr/Zarar'}</Text>
             </View>
             <Text style={[
               styles.summaryAmount,
@@ -246,6 +299,18 @@ export default function FinancesScreen() {
               {formatAmount(summary.totalProfit)}
             </Text>
           </View>
+        </View>
+
+        {/* Period Filter */}
+        <View style={styles.filterContainer}>
+          <PeriodButton value="month" title="Aylık" />
+          <PeriodButton value="year" title="Yıllık" />
+          <TouchableOpacity
+            style={[styles.filterButton, customRange.start && styles.filterButtonActive]}
+            onPress={() => setShowRangePicker(true)}
+          >
+            <Text style={[styles.filterButtonText, customRange.start && styles.filterButtonTextActive]}>Özel</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Filter Buttons */}
@@ -274,10 +339,83 @@ export default function FinancesScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-            transactions.map((item, index) => renderTransaction(item, index))
+            <>
+              {transactions.map((item, index) => renderTransaction(item, index))}
+              <TouchableOpacity style={styles.loadMoreBtn} onPress={loadMore}>
+                <Text style={styles.loadMoreText}>Daha Fazla Yükle</Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
       </ScrollView>
+      {showRangePicker && (
+        <View style={styles.rangeOverlay}>
+          <View style={styles.rangeCard}>
+            <Text style={styles.rangeTitle}>Özel Tarih Aralığı</Text>
+            <TouchableOpacity onPress={() => setShowRangePicker(false)} style={{ position: 'absolute', right: 12, top: 12 }}>
+              <Ionicons name="close" size={22} color={theme.colors.text} />
+            </TouchableOpacity>
+            <View style={{ height: 12 }} />
+            <DatePickerField label="Başlangıç" value={rangeDraftStart} onChange={setRangeDraftStart} />
+            <DatePickerField label="Bitiş" value={rangeDraftEnd} onChange={setRangeDraftEnd} />
+            <View style={{ height: 8 }} />
+            <TouchableOpacity
+              style={[styles.filterButton, !(rangeDraftStart && rangeDraftEnd) && { opacity: 0.6 }]}
+              disabled={!(rangeDraftStart && rangeDraftEnd)}
+              onPress={() => {
+                setCustomRange({ start: rangeDraftStart, end: rangeDraftEnd });
+                setPage(0);
+                setShowRangePicker(false);
+                setTimeout(() => loadFinancialData(true), 0);
+              }}
+            >
+              <Text style={styles.filterButtonText}>Uygula</Text>
+            </TouchableOpacity>
+            <View style={{ height: 12 }} />
+            <TouchableOpacity
+              style={styles.filterButton}
+              onPress={() => {
+                // Basit seçim: son 7 gün
+                const end = new Date();
+                const start = new Date();
+                start.setDate(end.getDate() - 6);
+                setRangeDraftStart(start);
+                setRangeDraftEnd(end);
+              }}
+            >
+              <Text style={styles.filterButtonText}>Son 7 Gün</Text>
+            </TouchableOpacity>
+            <View style={{ height: 8 }} />
+            <TouchableOpacity
+              style={styles.filterButton}
+              onPress={() => {
+                // Bu yıl
+                const end = new Date();
+                const start = new Date(end.getFullYear(), 0, 1);
+                setRangeDraftStart(start);
+                setRangeDraftEnd(end);
+              }}
+            >
+              <Text style={styles.filterButtonText}>Bu Yıl</Text>
+            </TouchableOpacity>
+            <View style={{ height: 12 }} />
+            <TouchableOpacity
+              style={styles.filterButton}
+              onPress={() => {
+                // Özel aralığı temizle
+                setCustomRange({ start: null, end: null });
+                setRangeDraftStart(null);
+                setRangeDraftEnd(null);
+                setPage(0);
+                setShowRangePicker(false);
+                setTimeout(() => loadFinancialData(true), 0);
+              }}
+            >
+              <Text style={styles.filterButtonText}>Temizle</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -468,5 +606,41 @@ const createStyles = (theme) => StyleSheet.create({
   emptyButtonText: {
     color: theme.colors.primaryText,
     fontWeight: '600',
+  },
+  loadMoreBtn: {
+    marginTop: 8,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  loadMoreText: {
+    color: theme.colors.text,
+    fontWeight: '600',
+  },
+  rangeOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    top: 0,
+    backgroundColor: theme.colors.overlay,
+    justifyContent: 'flex-end',
+  },
+  rangeCard: {
+    backgroundColor: theme.colors.card,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  rangeTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.colors.text,
+    textAlign: 'center',
   },
 }); 

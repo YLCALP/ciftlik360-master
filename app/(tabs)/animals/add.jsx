@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Yup from 'yup';
 import { FlashMessageService } from '../../../components/common/FlashMessage';
+import FormikDatePickerField from '../../../components/forms/FormikDatePickerField';
 import FormikSelectorGrid from '../../../components/forms/FormikSelectorGrid';
 import FormSubmitButton from '../../../components/forms/FormSubmitButton';
 import FormTextInput from '../../../components/forms/FormTextInput';
@@ -136,7 +137,7 @@ export default function AddAnimalScreen() {
                             <FormTextInput name="tag_number" label="Küpe Numarası *" placeholder="Örn: TR001, A001" />
                             <FormTextInput name="name" label="Hayvan Adı" placeholder="Hayvan adı (opsiyonel)" />
                             <FormikSelectorGrid name="gender" label="Cinsiyet" options={genderOptions} />
-                            <FormTextInput name="birth_date" label="Doğum Tarihi" placeholder="GG.AA.YYYY" />
+                            <FormikDatePickerField name="birth_date" label="Doğum Tarihi" asString />
                             <FormTextInput name="breed" label="Irk" placeholder="Hayvan ırkı" />
                             <FormTextInput name="weight" label="Ağırlık (kg)" placeholder="Ağırlık (kg)" keyboardType="numeric" />
                         </View>
@@ -149,7 +150,7 @@ export default function AddAnimalScreen() {
                         <View style={styles.section}>
                             <Text style={styles.sectionTitle}>Alış Bilgileri</Text>
                             <FormTextInput name="purchase_price" label="Alış Fiyatı (₺)" placeholder="Hayvan alış fiyatı" keyboardType="numeric" />
-                            <FormTextInput name="purchase_date" label="Alış Tarihi" placeholder="GG.AA.YYYY" />
+                            <FormikDatePickerField name="purchase_date" label="Alış Tarihi" asString />
                             <FormTextInput name="notes" label="Notlar" placeholder="Hayvan hakkında notlar" multiline numberOfLines={3} />
                         </View>
 
