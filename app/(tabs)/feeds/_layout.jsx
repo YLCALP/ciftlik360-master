@@ -26,22 +26,6 @@ export default function FeedsLayout() {
           headerBackTitle: 'Geri'
         }} 
       />
-      <Stack.Screen 
-        name="settings" 
-        options={{ 
-          title: 'Tüketim Ayarları',
-          headerShown: true,
-          headerBackTitle: 'Geri'
-        }} 
-      />
-      <Stack.Screen 
-        name="consumption-reports" 
-        options={{ 
-          title: 'Tüketim Raporları',
-          headerShown: true,
-          headerBackTitle: 'Geri'
-        }} 
-      />
     </Stack>
   );
 } 

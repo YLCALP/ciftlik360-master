@@ -65,7 +65,6 @@ export default function FeedDetailScreen() {
                     expiry_date: formatDateForInput(foundFeed.expiry_date),
                     quantity: String(foundFeed.quantity || ''),
                     price_per_unit: String(foundFeed.price_per_unit || ''),
-                    min_stock_level: String(foundFeed.min_stock_level || ''),
                 });
             } else {
                 FlashMessageService.error('Hata', 'Yem bulunamadı.');
@@ -98,7 +97,6 @@ export default function FeedDetailScreen() {
                 expiry_date: formatDateForDB(values.expiry_date),
                 quantity: parseFloat(values.quantity || 0),
                 price_per_unit: parseFloat(values.price_per_unit || 0),
-                min_stock_level: parseFloat(values.min_stock_level || 0),
             };
 
             await feedAPI.updateFeed(id, updateData);
@@ -139,7 +137,6 @@ export default function FeedDetailScreen() {
                                 <FormTextInput name="quantity" label="Miktar *" keyboardType="numeric" />
                                 <FormikSelectorGrid name="unit" label="Birim" options={unitOptions} />
                                 <FormTextInput name="price_per_unit" label="Birim Fiyat" keyboardType="numeric" />
-                                <FormTextInput name="min_stock_level" label="Minimum Stok Seviyesi" keyboardType="numeric" />
                             </View>
 
                             <View style={styles.section}>

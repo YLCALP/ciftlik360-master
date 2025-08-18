@@ -235,21 +235,6 @@ export default function FeedsScreen() {
         </View>
       </View>
 
-      {/* Consumption Management Buttons */}
-      <View style={styles.managementContainer}>
-        <TouchableOpacity 
-          style={styles.managementButton} 
-          onPress={() => router.push('/feeds/settings')}
-        >
-          <Text style={styles.managementButtonText}>⚙️ Tüketim Ayarları</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.managementButton} 
-          onPress={() => router.push('/feeds/consumption-reports')}
-        >
-          <Text style={styles.managementButtonText}>📊 Tüketim Raporları</Text>
-        </TouchableOpacity>
-      </View>
 
       {/* Feed List */}
       <FlatList
@@ -323,9 +308,6 @@ const getScreenStyles = (theme) => StyleSheet.create({
     fontSize: theme.typography.sizes.caption,
     color: theme.colors.textSecondary,
   },
-  managementContainer: { paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.md, flexDirection: 'row', gap: theme.spacing.md, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
-  managementButton: { ...theme.styles.button('outline'), flex: 1, paddingVertical: theme.spacing.md },
-  managementButtonText: { ...theme.styles.text('button'), fontSize: theme.typography.sizes.sm, color: theme.colors.text },
   listContainer: { paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.md },
   listContainerEmpty: {
     flex: 1,
