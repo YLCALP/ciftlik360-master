@@ -6,16 +6,17 @@
 import { Spacing } from './spacing';
 
 export const ComponentStyles = {
-  // Button variants
+  // Button variants - iOS & Android optimized
   button: {
     base: {
-      height: Spacing.sizes.buttonHeight,
-      paddingHorizontal: Spacing.component.buttonHorizontal,
-      paddingVertical: Spacing.component.buttonVertical,
-      borderRadius: Spacing.radius.lg,
+      height: Spacing.sizes.button.height,
+      paddingHorizontal: Spacing.component.button.paddingHorizontal,
+      paddingVertical: Spacing.component.button.paddingVertical,
+      borderRadius: Spacing.component.button.radius,
       alignItems: 'center',
       justifyContent: 'center',
       flexDirection: 'row',
+      minWidth: Spacing.sizes.button.minWidth,
     },
     primary: {
       // Colors will be applied from theme
@@ -31,25 +32,29 @@ export const ComponentStyles = {
       backgroundColor: 'transparent',
     },
     small: {
-      height: Spacing.sizes.buttonSmallHeight,
-      paddingHorizontal: Spacing.component.buttonSmallHorizontal,
-      paddingVertical: Spacing.component.buttonSmallVertical,
+      height: Spacing.sizes.button.heightSmall,
+      paddingHorizontal: Spacing.component.button.small.paddingHorizontal,
+      paddingVertical: Spacing.component.button.small.paddingVertical,
+      minWidth: Spacing.sizes.button.minWidthSmall,
     },
     large: {
-      height: Spacing.sizes.buttonLargeHeight,
-      paddingHorizontal: Spacing.component.buttonHorizontal + 8,
+      height: Spacing.sizes.button.heightLarge,
+      paddingHorizontal: Spacing.component.button.large.paddingHorizontal,
+      paddingVertical: Spacing.component.button.large.paddingVertical,
+      minWidth: Spacing.sizes.button.minWidthLarge,
     },
   },
 
-  // Input variants
+  // Input variants - iOS optimized
   input: {
     base: {
-      height: Spacing.sizes.inputHeight,
-      paddingHorizontal: Spacing.component.inputHorizontal,
-      paddingVertical: Spacing.component.inputVertical,
+      height: Spacing.sizes.input.height,
+      paddingHorizontal: Spacing.component.form.input.paddingHorizontal,
+      paddingVertical: Spacing.component.form.input.paddingVertical,
       borderRadius: Spacing.radius.lg,
       borderWidth: 1,
       fontSize: 16,
+      minHeight: Spacing.sizes.input.minHeight,
     },
     small: {
       height: Spacing.sizes.inputSmallHeight,

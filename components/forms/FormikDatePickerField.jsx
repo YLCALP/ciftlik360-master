@@ -41,7 +41,7 @@ export default function FormikDatePickerField({
 
 const createStyles = (theme) => StyleSheet.create({
   container: {
-    marginBottom: 4,
+    marginBottom: theme.spacing?.md || 16,
   },
   errorText: {
     marginTop: 4,

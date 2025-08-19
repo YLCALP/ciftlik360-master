@@ -1,22 +1,28 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Formik } from 'formik';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Dimensions,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Yup from 'yup';
 import { FlashMessageService } from '../../../components/common/FlashMessage';
+import { Icon } from '../../../components/common/Icon';
+import DetailHeader from '../../../components/detail/DetailHeader';
+import DetailSection from '../../../components/detail/DetailSection';
+import DetailTextInput from '../../../components/forms/DetailTextInput';
+import DetailButton from '../../../components/forms/DetailButton';
 import FormikDatePickerField from '../../../components/forms/FormikDatePickerField';
 import { animalsAPI, feedAPI, financialAPI } from '../../../services/api';
-import { useTheme } from '../../../themes/useTheme';
+import { useTheme } from '../../../themes';
 
 export default function AddFinancialTransactionScreen() {
   const routeParams = useLocalSearchParams();
@@ -24,7 +30,10 @@ export default function AddFinancialTransactionScreen() {
   const initialCategoryParam = 'category' in routeParams ? String(routeParams.category) : undefined;
   const initialAnimalIdParam = 'animalId' in routeParams ? String(routeParams.animalId) : undefined;
   const initialFeedIdParam = 'feedId' in routeParams ? String(routeParams.feedId) : undefined;
+  
   const theme = useTheme();
+  const styles = getStyles(theme);
+  
   const [selectedAnimal, setSelectedAnimal] = useState(null);
   const [animals, setAnimals] = useState([]);
   const [showAnimalPicker, setShowAnimalPicker] = useState(false);
@@ -32,37 +41,33 @@ export default function AddFinancialTransactionScreen() {
   const [feeds, setFeeds] = useState([]);
   const [showFeedPicker, setShowFeedPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
-  const [quantity, setQuantity] = useState('');
-  const [pricePerUnit, setPricePerUnit] = useState('');
   const [loading, setLoading] = useState(false);
   const [categorySearch, setCategorySearch] = useState('');
   const [animalSearch, setAnimalSearch] = useState('');
 
-  const styles = useMemo(() => createStyles(theme), [theme]);
-
   const incomeCategories = [
-    { value: 'animal_sale', label: 'Hayvan Satışı' },
-    { value: 'milk_sale', label: 'Süt Satışı' },
-    { value: 'egg_sale', label: 'Yumurta Satışı' },
-    { value: 'manure_sale', label: 'Gübre Satışı' },
-    { value: 'other_income', label: 'Diğer Gelir' },
+    { value: 'animal_sale', label: 'Hayvan Satışı', icon: 'trending-up' },
+    { value: 'milk_sale', label: 'Süt Satışı', icon: 'droplet' },
+    { value: 'egg_sale', label: 'Yumurta Satışı', icon: 'circle' },
+    { value: 'manure_sale', label: 'Gübre Satışı', icon: 'package' },
+    { value: 'other_income', label: 'Diğer Gelir', icon: 'plus' },
   ];
 
   const expenseCategories = [
-    { value: 'animal_purchase', label: 'Hayvan Alımı' },
-    { value: 'feed_purchase', label: 'Yem Alımı' },
-    { value: 'veterinary', label: 'Veteriner' },
-    { value: 'medicine', label: 'İlaç' },
-    { value: 'vaccination', label: 'Aşı' },
-    { value: 'equipment', label: 'Ekipman' },
-    { value: 'maintenance', label: 'Bakım' },
-    { value: 'fuel', label: 'Yakıt' },
-    { value: 'electricity', label: 'Elektrik' },
-    { value: 'water', label: 'Su' },
-    { value: 'insurance', label: 'Sigorta' },
-    { value: 'tax', label: 'Vergi' },
-    { value: 'labor', label: 'İşçilik' },
-    { value: 'other_expense', label: 'Diğer Gider' },
+    { value: 'animal_purchase', label: 'Hayvan Alımı', icon: 'shopping-cart' },
+    { value: 'feed_purchase', label: 'Yem Alımı', icon: 'package' },
+    { value: 'veterinary', label: 'Veteriner', icon: 'heart' },
+    { value: 'medicine', label: 'İlaç', icon: 'plus-square' },
+    { value: 'vaccination', label: 'Aşı', icon: 'shield' },
+    { value: 'equipment', label: 'Ekipman', icon: 'tool' },
+    { value: 'maintenance', label: 'Bakım', icon: 'settings' },
+    { value: 'fuel', label: 'Yakıt', icon: 'zap' },
+    { value: 'electricity', label: 'Elektrik', icon: 'zap' },
+    { value: 'water', label: 'Su', icon: 'droplet' },
+    { value: 'insurance', label: 'Sigorta', icon: 'shield' },
+    { value: 'tax', label: 'Vergi', icon: 'file-text' },
+    { value: 'labor', label: 'İşçilik', icon: 'users' },
+    { value: 'other_expense', label: 'Diğer Gider', icon: 'minus' },
   ];
 
   useEffect(() => {
@@ -71,34 +76,18 @@ export default function AddFinancialTransactionScreen() {
   }, []);
 
   useEffect(() => {
-    // URL parametrelerinden geldiğinde seçili hayvanı ayarla
     if (initialAnimalIdParam && animals.length > 0) {
       const animal = animals.find(a => a.id === initialAnimalIdParam);
-      if (animal) {
-        setSelectedAnimal(animal);
-      }
+      if (animal) setSelectedAnimal(animal);
     }
   }, [initialAnimalIdParam, animals]);
 
   useEffect(() => {
-    // URL parametrelerinden geldiğinde seçili yemi ayarla
     if (initialFeedIdParam && feeds.length > 0) {
       const feed = feeds.find(f => f.id === initialFeedIdParam);
-      if (feed) {
-        setSelectedFeed(feed);
-      }
+      if (feed) setSelectedFeed(feed);
     }
   }, [initialFeedIdParam, feeds]);
-
-  useEffect(() => {
-    // Kategori değiştiğinde seçili item'ları sıfırla (parametreden gelmiyorsa)
-    if (!initialAnimalIdParam) {
-      setSelectedAnimal(null);
-    }
-    if (!initialFeedIdParam) {
-      setSelectedFeed(null);
-    }
-  }, [initialAnimalIdParam, initialFeedIdParam]);
 
   const loadAnimals = async () => {
     try {
@@ -129,17 +118,9 @@ export default function AddFinancialTransactionScreen() {
   };
 
   const isAnimalRequired = (category) => ['animal_purchase', 'animal_sale'].includes(category);
-
   const isFeedRequired = (category) => ['feed_purchase'].includes(category);
-
   const isFeedPurchase = (category) => category === 'feed_purchase';
 
-  // Input yardımcıları
-  function getISODate(d) {
-    return new Date(d).toISOString().split('T')[0];
-  }
-
-  // Formik + Yup şeması
   const TransactionSchema = Yup.object().shape({
     type: Yup.string().oneOf(['income', 'expense']).required('İşlem türü zorunludur'),
     category: Yup.string().required('Kategori zorunludur'),
@@ -162,7 +143,7 @@ export default function AddFinancialTransactionScreen() {
     ),
   });
 
-  async function handleSubmit(values, { setSubmitting }) {
+  const handleSubmit = async (values, { setSubmitting }) => {
     setLoading(true);
     try {
       const isFeed = isFeedPurchase(values.category);
@@ -170,7 +151,7 @@ export default function AddFinancialTransactionScreen() {
         ? parseFloat(values.quantity) * parseFloat(values.unit_price)
         : parseFloat(values.amount);
 
-      const isoDate = getISODate(values.date);
+      const isoDate = new Date(values.date).toISOString().split('T')[0];
 
       if (values.category === 'animal_sale' && values.animal_id) {
         await financialAPI.recordAnimalSale(values.animal_id, {
@@ -201,7 +182,7 @@ export default function AddFinancialTransactionScreen() {
       setSubmitting(false);
       setLoading(false);
     }
-  }
+  };
 
   const initialValues = {
     type: initialTypeParam || 'expense',
@@ -215,22 +196,19 @@ export default function AddFinancialTransactionScreen() {
     unit_price: '',
   };
 
+  // Modal Components
   const CategoryPickerModal = ({ selectedType, selectedCategory, onSelect }) => (
-    <Modal
-      visible={showCategoryPicker}
-      transparent={true}
-      animationType="slide"
-    >
+    <Modal visible={showCategoryPicker} transparent={true} animationType="slide">
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Kategori Seç</Text>
             <TouchableOpacity onPress={() => setShowCategoryPicker(false)}>
-              <Ionicons name="close" size={24} color={theme.colors.text} />
+              <Icon library="Feather" name="x" size={24} color={theme.colors.text} />
             </TouchableOpacity>
           </View>
           <View style={styles.searchBar}>
-            <Ionicons name="search" size={18} color={theme.colors.textMuted} />
+            <Icon library="Feather" name="search" size={18} color={theme.colors.textMuted} />
             <TextInput
               style={styles.searchInput}
               placeholder="Kategori ara..."
@@ -255,14 +233,22 @@ export default function AddFinancialTransactionScreen() {
                     setCategorySearch('');
                   }}
                 >
-                  <Text style={[
-                    styles.categoryText,
-                    selectedCategory === cat.value && styles.categoryTextSelected
-                  ]}>
-                    {cat.label}
-                  </Text>
+                  <View style={styles.categoryItemContent}>
+                    <Icon 
+                      library="Feather" 
+                      name={cat.icon} 
+                      size={20} 
+                      color={selectedCategory === cat.value ? theme.colors.primary : theme.colors.textSecondary} 
+                    />
+                    <Text style={[
+                      styles.categoryText,
+                      selectedCategory === cat.value && styles.categoryTextSelected
+                    ]}>
+                      {cat.label}
+                    </Text>
+                  </View>
                   {selectedCategory === cat.value && (
-                    <Ionicons name="checkmark" size={20} color={theme.colors.primary} />
+                    <Icon library="Feather" name="check" size={20} color={theme.colors.primary} />
                   )}
                 </TouchableOpacity>
               ))}
@@ -273,21 +259,17 @@ export default function AddFinancialTransactionScreen() {
   );
 
   const AnimalPickerModal = ({ onSelect, currentAnimalId }) => (
-    <Modal
-      visible={showAnimalPicker}
-      transparent={true}
-      animationType="slide"
-    >
+    <Modal visible={showAnimalPicker} transparent={true} animationType="slide">
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Hayvan Seç</Text>
             <TouchableOpacity onPress={() => setShowAnimalPicker(false)}>
-              <Ionicons name="close" size={24} color={theme.colors.text} />
+              <Icon library="Feather" name="x" size={24} color={theme.colors.text} />
             </TouchableOpacity>
           </View>
           <View style={styles.searchBar}>
-            <Ionicons name="search" size={18} color={theme.colors.textMuted} />
+            <Icon library="Feather" name="search" size={18} color={theme.colors.textMuted} />
             <TextInput
               style={styles.searchInput}
               placeholder="Küpe no / ad ara..."
@@ -323,7 +305,7 @@ export default function AddFinancialTransactionScreen() {
                     <Text style={styles.animalSpecies}>{animal.species} - {animal.breed}</Text>
                   </View>
                   {(selectedAnimal?.id === animal.id || currentAnimalId === animal.id) && (
-                    <Ionicons name="checkmark" size={20} color={theme.colors.primary} />
+                    <Icon library="Feather" name="check" size={20} color={theme.colors.primary} />
                   )}
                 </TouchableOpacity>
               ))}
@@ -334,17 +316,13 @@ export default function AddFinancialTransactionScreen() {
   );
 
   const FeedPickerModal = ({ onSelect, currentFeedId }) => (
-    <Modal
-      visible={showFeedPicker}
-      transparent={true}
-      animationType="slide"
-    >
+    <Modal visible={showFeedPicker} transparent={true} animationType="slide">
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Yem Seç</Text>
             <TouchableOpacity onPress={() => setShowFeedPicker(false)}>
-              <Ionicons name="close" size={24} color={theme.colors.text} />
+              <Icon library="Feather" name="x" size={24} color={theme.colors.text} />
             </TouchableOpacity>
           </View>
           <ScrollView style={styles.feedList}>
@@ -372,481 +350,477 @@ export default function AddFinancialTransactionScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Yeni İşlem</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <View style={styles.container}>
+      <DetailHeader
+        title="Yeni İşlem"
+        subtitle="Finansal işlem ekle"
+        emoji="💰"
+        gradient={true}
+      />
 
       <Formik
         initialValues={initialValues}
         validationSchema={TransactionSchema}
         onSubmit={handleSubmit}
       >
-        {({ values, errors, touched, setFieldValue, handleSubmit }) => (
-          <ScrollView 
-            style={styles.content}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
+        {({ values, errors, touched, setFieldValue, handleSubmit, isSubmitting }) => (
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           >
-            {/* Transaction Type */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>İşlem Türü</Text>
-              <View style={styles.typeButtons}>
-                <TouchableOpacity
-                  style={[styles.typeButton, values.type === 'income' && styles.typeButtonActive]}
-                  onPress={() => {
-                    setFieldValue('type', 'income');
-                    setFieldValue('category', '');
-                  }}
-                >
-                  <Text style={[styles.typeButtonText, values.type === 'income' && styles.typeButtonTextActive]}>Gelir</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.typeButton, values.type === 'expense' && styles.typeButtonActive]}
-                  onPress={() => {
-                    setFieldValue('type', 'expense');
-                    setFieldValue('category', '');
-                  }}
-                >
-                  <Text style={[styles.typeButtonText, values.type === 'expense' && styles.typeButtonTextActive]}>Gider</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Category */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Kategori *</Text>
-              <TouchableOpacity
-                style={styles.categorySelector}
-                onPress={() => setShowCategoryPicker(true)}
+            <ScrollView 
+              style={styles.scrollView}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+            >
+              {/* Transaction Type */}
+              <DetailSection
+                title="İşlem Türü"
+                icon={{ library: 'Feather', name: 'activity' }}
+                showDivider={false}
               >
-                <Text style={[styles.categorySelectorText, !values.category && styles.placeholder]}>
-                  {getCategoryLabel(values.category, values.type)}
-                </Text>
-                <Ionicons name="chevron-down" size={20} color={theme.colors.textMuted} />
-              </TouchableOpacity>
-              {touched.category && errors.category && (
-                <Text style={styles.helpText}>{errors.category}</Text>
+                <View style={styles.typeButtons}>
+                  <TouchableOpacity
+                    style={[styles.typeButton, values.type === 'income' && styles.typeButtonActive]}
+                    onPress={() => {
+                      setFieldValue('type', 'income');
+                      setFieldValue('category', '');
+                    }}
+                  >
+                    <Icon 
+                      library="Feather" 
+                      name="trending-up" 
+                      size={20} 
+                      color={values.type === 'income' ? theme.colors.primaryText : theme.colors.textSecondary} 
+                    />
+                    <Text style={[styles.typeButtonText, values.type === 'income' && styles.typeButtonTextActive]}>
+                      Gelir
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.typeButton, values.type === 'expense' && styles.typeButtonActive]}
+                    onPress={() => {
+                      setFieldValue('type', 'expense');
+                      setFieldValue('category', '');
+                    }}
+                  >
+                    <Icon 
+                      library="Feather" 
+                      name="trending-down" 
+                      size={20} 
+                      color={values.type === 'expense' ? theme.colors.primaryText : theme.colors.textSecondary} 
+                    />
+                    <Text style={[styles.typeButtonText, values.type === 'expense' && styles.typeButtonTextActive]}>
+                      Gider
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </DetailSection>
+
+              {/* Category */}
+              <DetailSection
+                title="Kategori"
+                subtitle="İşlem kategorisi seçin"
+                icon={{ library: 'Feather', name: 'grid' }}
+              >
+                <TouchableOpacity
+                  style={styles.selector}
+                  onPress={() => setShowCategoryPicker(true)}
+                >
+                  <Text style={[styles.selectorText, !values.category && styles.placeholder]}>
+                    {getCategoryLabel(values.category, values.type)}
+                  </Text>
+                  <Icon library="Feather" name="chevron-down" size={20} color={theme.colors.textMuted} />
+                </TouchableOpacity>
+                {touched.category && errors.category && (
+                  <Text style={styles.errorText}>{errors.category}</Text>
+                )}
+              </DetailSection>
+
+              {/* Animal Selection (if required) */}
+              {isAnimalRequired(values.category) && (
+                <DetailSection
+                  title="Hayvan Seçimi"
+                  icon={{ library: 'MaterialCommunityIcons', name: 'cow' }}
+                >
+                  <TouchableOpacity
+                    style={styles.selector}
+                    onPress={() => setShowAnimalPicker(true)}
+                  >
+                    <Text style={[styles.selectorText, !selectedAnimal && styles.placeholder]}>
+                      {selectedAnimal 
+                        ? `${selectedAnimal.tag_number} - ${selectedAnimal.name || 'İsimsiz'}`
+                        : 'Hayvan seçin...'}
+                    </Text>
+                    <Icon library="Feather" name="chevron-down" size={20} color={theme.colors.textMuted} />
+                  </TouchableOpacity>
+                  {touched.animal_id && errors.animal_id && (
+                    <Text style={styles.errorText}>{errors.animal_id}</Text>
+                  )}
+                </DetailSection>
               )}
-            </View>
 
-            {/* Animal Selection (if required) */}
-            {isAnimalRequired(values.category) && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Hayvan *</Text>
-                <TouchableOpacity
-                  style={styles.animalSelector}
-                  onPress={() => setShowAnimalPicker(true)}
+              {/* Feed Selection (if required) */}
+              {isFeedRequired(values.category) && (
+                <DetailSection
+                  title="Yem Seçimi"
+                  icon={{ library: 'MaterialCommunityIcons', name: 'grain' }}
                 >
-                  <Text style={[styles.animalSelectorText, !selectedAnimal && styles.placeholder]}>
-                    {selectedAnimal 
-                      ? `${selectedAnimal.tag_number} - ${selectedAnimal.name || 'İsimsiz'}`
-                      : 'Hayvan seçin...'}
-                  </Text>
-                  <Ionicons name="chevron-down" size={20} color={theme.colors.textMuted} />
-                </TouchableOpacity>
-                {touched.animal_id && errors.animal_id && (
-                  <Text style={styles.helpText}>{errors.animal_id}</Text>
-                )}
-              </View>
-            )}
+                  <TouchableOpacity
+                    style={styles.selector}
+                    onPress={() => setShowFeedPicker(true)}
+                  >
+                    <Text style={[styles.selectorText, !selectedFeed && styles.placeholder]}>
+                      {selectedFeed ? selectedFeed.feed_name : 'Yem seçin...'}
+                    </Text>
+                    <Icon library="Feather" name="chevron-down" size={20} color={theme.colors.textMuted} />
+                  </TouchableOpacity>
+                  {touched.feed_id && errors.feed_id && (
+                    <Text style={styles.errorText}>{errors.feed_id}</Text>
+                  )}
+                </DetailSection>
+              )}
 
-            {/* Feed Selection (if required) */}
-            {isFeedRequired(values.category) && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Yem *</Text>
-                <TouchableOpacity
-                  style={styles.feedSelector}
-                  onPress={() => setShowFeedPicker(true)}
+              {/* Feed Purchase Specific Fields */}
+              {isFeedPurchase(values.category) && (
+                <DetailSection
+                  title="Miktar ve Fiyat"
+                  subtitle="Yem alış detayları"
+                  icon={{ library: 'Feather', name: 'calculator' }}
                 >
-                  <Text style={[styles.feedSelectorText, !selectedFeed && styles.placeholder]}>
-                    {selectedFeed ? selectedFeed.feed_name : 'Yem seçin...'}
-                  </Text>
-                  <Ionicons name="chevron-down" size={20} color={theme.colors.textMuted} />
-                </TouchableOpacity>
-                {touched.feed_id && errors.feed_id && (
-                  <Text style={styles.helpText}>{errors.feed_id}</Text>
-                )}
-              </View>
-            )}
-
-            {/* Feed Purchase Specific Fields */}
-            {isFeedPurchase(values.category) && (
-              <>
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Miktar ({selectedFeed?.unit || 'kg'}) *</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={values.quantity}
-                    onChangeText={(t) => setFieldValue('quantity', t)}
+                  <DetailTextInput 
+                    name="quantity" 
+                    label={`Miktar (${selectedFeed?.unit || 'kg'}) *`}
+                    keyboardType="numeric"
+                    prefixIcon={{ library: 'Feather', name: 'hash' }}
                     placeholder="0"
-                    keyboardType="numeric"
                   />
-                </View>
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Birim Fiyat (₺/{selectedFeed?.unit || 'kg'}) *</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={values.unit_price}
-                    onChangeText={(t) => setFieldValue('unit_price', t)}
+                  <DetailTextInput 
+                    name="unit_price" 
+                    label={`Birim Fiyat (₺/${selectedFeed?.unit || 'kg'}) *`}
+                    keyboardType="numeric"
+                    prefixIcon={{ library: 'Feather', name: 'dollar-sign' }}
                     placeholder="0.00"
-                    keyboardType="numeric"
                   />
-                </View>
-                {(values.quantity && values.unit_price) && (
-                  <Text style={styles.helpText}>
-                    Otomatik hesaplanan: {values.quantity} × {values.unit_price} = {Number(values.quantity) * Number(values.unit_price) || 0}
-                  </Text>
-                )}
-              </>
-            )}
+                  {(values.quantity && values.unit_price) && (
+                    <View style={styles.calculatedAmount}>
+                      <Text style={styles.calculatedAmountLabel}>Toplam Tutar:</Text>
+                      <Text style={styles.calculatedAmountValue}>
+                        ₺{(Number(values.quantity) * Number(values.unit_price) || 0).toFixed(2)}
+                      </Text>
+                    </View>
+                  )}
+                </DetailSection>
+              )}
 
-            {/* Amount */}
-            {!isFeedPurchase(values.category) && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Tutar (₺) *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={values.amount}
-                  onChangeText={(t) => setFieldValue('amount', t)}
-                  placeholder="0.00"
-                  keyboardType="numeric"
+              {/* Amount */}
+              {!isFeedPurchase(values.category) && (
+                <DetailSection
+                  title="Tutar"
+                  subtitle="İşlem tutarı"
+                  icon={{ library: 'Feather', name: 'dollar-sign' }}
+                >
+                  <DetailTextInput 
+                    name="amount" 
+                    label="Tutar (₺) *"
+                    keyboardType="numeric"
+                    prefixIcon={{ library: 'Feather', name: 'dollar-sign' }}
+                    placeholder="0.00"
+                  />
+                </DetailSection>
+              )}
+
+              {/* Date and Description */}
+              <DetailSection
+                title="Tarih ve Açıklama"
+                subtitle="Ek bilgiler"
+                icon={{ library: 'Feather', name: 'calendar' }}
+                collapsible={true}
+              >
+                <FormikDatePickerField name="date" label="Tarih *" />
+                <DetailTextInput 
+                  name="description" 
+                  label="Açıklama"
+                  multiline 
+                  numberOfLines={3}
+                  placeholder="İsteğe bağlı açıklama..."
+                  style={{ height: 80, textAlignVertical: 'top' }}
+                />
+              </DetailSection>
+
+              {/* Action Buttons */}
+              <View style={styles.actionSection}>
+                <DetailButton
+                  title={loading ? 'Kaydediliyor...' : 'İşlemi Kaydet'}
+                  onPress={handleSubmit}
+                  loading={isSubmitting || loading}
+                  leadingIcon={{ library: 'Feather', name: 'save' }}
+                  fullWidth
+                  size="lg"
+                />
+
+                <DetailButton
+                  title="İptal"
+                  variant="outline"
+                  onPress={() => router.back()}
+                  leadingIcon={{ library: 'Feather', name: 'x' }}
+                  fullWidth
+                  style={{ marginTop: theme.spacing.md }}
                 />
               </View>
-            )}
+            </ScrollView>
 
-            {/* Date */}
-            <View style={styles.section}>
-              <FormikDatePickerField name="date" label="Tarih *" />
-            </View>
-
-            {/* Description */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Açıklama</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={values.description}
-                onChangeText={(t) => setFieldValue('description', t)}
-                placeholder="İsteğe bağlı açıklama..."
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-
-            {/* Save Button - ScrollView içinde */}
-            <View style={styles.saveButtonContainer}>
-              <TouchableOpacity
-                style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-                onPress={handleSubmit}
-                disabled={loading}
-              >
-                <Text style={styles.saveButtonText}>
-                  {loading ? 'Kaydediliyor...' : 'Kaydet'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Category Picker Modal */}
-            {showCategoryPicker && (
-              <CategoryPickerModal
-                selectedType={values.type}
-                selectedCategory={values.category}
-                onSelect={(val) => setFieldValue('category', val)}
-              />
-            )}
-            {/* Animal Picker Modal */}
-            {showAnimalPicker && (
-              <AnimalPickerModal
-                currentAnimalId={values.animal_id}
-                onSelect={(id) => setFieldValue('animal_id', id)}
-              />
-            )}
-            {/* Feed Picker Modal */}
-            {showFeedPicker && (
-              <FeedPickerModal
-                currentFeedId={values.feed_id}
-                onSelect={(id) => setFieldValue('feed_id', id)}
-              />
-            )}
-
-            {/* Modallarda seçim eventleri */}
-          </ScrollView>
+            {/* Modals */}
+            <CategoryPickerModal
+              selectedType={values.type}
+              selectedCategory={values.category}
+              onSelect={(val) => setFieldValue('category', val)}
+            />
+            <AnimalPickerModal
+              currentAnimalId={values.animal_id}
+              onSelect={(id) => setFieldValue('animal_id', id)}
+            />
+            <FeedPickerModal
+              currentFeedId={values.feed_id}
+              onSelect={(id) => setFieldValue('feed_id', id)}
+            />
+          </KeyboardAvoidingView>
         )}
       </Formik>
-
-      {/* Modallar bileşen içinde render ediliyor */}
-    </SafeAreaView>
+    </View>
   );
 }
 
-const createStyles = (theme) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: theme.colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-  scrollContent: {
-    paddingBottom: 100, // Tab bar ve scroll için yeterli space
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.text,
-    marginBottom: 8,
-  },
-  typeButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  typeButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-  },
-  typeButtonActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  typeButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: theme.colors.textSecondary,
-  },
-  typeButtonTextActive: {
-    color: theme.colors.primaryText,
-  },
+const getStyles = (theme) => {
+  const { width } = Dimensions.get('window');
+  const isTablet = width >= 768;
+  
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: isTablet ? theme.spacing.xl : theme.spacing.md,
+      paddingTop: theme.spacing.lg,
+      paddingBottom: theme.spacing.xl,
+      maxWidth: isTablet ? 800 : '100%',
+      alignSelf: isTablet ? 'center' : 'stretch',
+      width: '100%',
+    },
+    typeButtons: {
+      flexDirection: 'row',
+      gap: theme.spacing.md,
+    },
+    typeButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.lg,
+      borderRadius: theme.spacing.radius.lg,
+      backgroundColor: theme.colors.surface,
+      borderWidth: 2,
+      borderColor: 'transparent',
+      gap: theme.spacing.sm,
+    },
+    typeButtonActive: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    typeButtonText: {
+      ...theme.typography.styles.button,
+      color: theme.colors.textSecondary,
+      fontWeight: '600',
+    },
+    typeButtonTextActive: {
+      color: theme.colors.primaryText,
+    },
+    selector: {
+      backgroundColor: theme.colors.card,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.spacing.radius.lg,
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: theme.spacing.md,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      minHeight: 52,
+    },
+    selectorText: {
+      ...theme.typography.styles.body,
+      color: theme.colors.text,
+      flex: 1,
+    },
+    placeholder: {
+      color: theme.colors.textMuted,
+    },
+    errorText: {
+      ...theme.typography.styles.caption,
+      color: theme.colors.error,
+      marginTop: theme.spacing.xs,
+    },
+    calculatedAmount: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.lg,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.spacing.radius.lg,
+      marginTop: theme.spacing.md,
+    },
+    calculatedAmountLabel: {
+      ...theme.typography.styles.body,
+      color: theme.colors.textSecondary,
+      fontWeight: '600',
+    },
+    calculatedAmountValue: {
+      ...theme.typography.styles.h4,
+      color: theme.colors.primary,
+      fontWeight: '700',
+    },
+    actionSection: {
+      paddingHorizontal: theme.spacing.sm,
+      marginTop: theme.spacing.xl,
+      maxWidth: isTablet ? 400 : '100%',
+      alignSelf: 'center',
+      width: '100%',
+    },
 
-  input: {
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: theme.colors.text,
-  },
-  inputReadonly: {
-    backgroundColor: theme.colors.surface,
-    color: theme.colors.textSecondary,
-  },
-  helpText: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginTop: 4,
-    fontStyle: 'italic',
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  animalSelector: {
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  animalSelectorText: {
-    fontSize: 16,
-    color: theme.colors.text,
-  },
-  placeholder: {
-    color: theme.colors.textMuted,
-  },
-  dateButton: {
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  dateButtonText: {
-    fontSize: 16,
-    color: theme.colors.text,
-  },
-  saveButtonContainer: {
-    backgroundColor: theme.colors.background,
-    padding: 16,
-    paddingBottom: 32, // Tab bar için extra space
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  saveButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 8,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  saveButtonDisabled: {
-    backgroundColor: theme.colors.textDisabled,
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.primaryText,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: theme.colors.overlay,
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: theme.colors.card,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    maxHeight: '70%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.text,
-  },
-  animalList: {
-    padding: 16,
-  },
-  animalItem: {
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: theme.colors.surface,
-  },
-  animalItemSelected: {
-    backgroundColor: theme.colors.card,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-  },
-  animalTag: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.text,
-  },
-  animalName: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  animalSpecies: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    marginTop: 2,
-  },
-  feedSelector: {
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  feedSelectorText: {
-    fontSize: 16,
-    color: theme.colors.text,
-  },
-  feedList: {
-    padding: 16,
-  },
-  feedItem: {
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: theme.colors.surface,
-  },
-  feedItemSelected: {
-    backgroundColor: theme.colors.card,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-  },
-  feedName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.text,
-  },
-  feedUnit: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    marginTop: 2,
-  },
-  categorySelector: {
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  categorySelectorText: {
-    fontSize: 16,
-    color: theme.colors.text,
-  },
-  categoryList: {
-    padding: 16,
-  },
-  categoryItem: {
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: theme.colors.surface,
-  },
-  categoryItemSelected: {
-    backgroundColor: theme.colors.card,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-  },
-  categoryText: {
-    fontSize: 16,
-    color: theme.colors.text,
-  },
-  categoryTextSelected: {
-    color: theme.colors.primary,
-  },
-}); 
+    // Modal styles
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: theme.colors.card,
+      borderTopLeftRadius: theme.spacing.radius.xl,
+      borderTopRightRadius: theme.spacing.radius.xl,
+      maxHeight: '70%',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: theme.spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    modalTitle: {
+      ...theme.typography.styles.h3,
+      color: theme.colors.text,
+      fontWeight: '700',
+    },
+    searchBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: theme.spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+      gap: theme.spacing.sm,
+    },
+    searchInput: {
+      flex: 1,
+      ...theme.typography.styles.body,
+      color: theme.colors.text,
+      paddingVertical: theme.spacing.sm,
+    },
+    categoryList: {
+      padding: theme.spacing.md,
+    },
+    categoryItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: theme.spacing.md,
+      borderRadius: theme.spacing.radius.lg,
+      marginBottom: theme.spacing.xs,
+      backgroundColor: theme.colors.surface,
+    },
+    categoryItemSelected: {
+      backgroundColor: theme.colors.primary + '15',
+      borderWidth: 1,
+      borderColor: theme.colors.primary,
+    },
+    categoryItemContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.md,
+    },
+    categoryText: {
+      ...theme.typography.styles.body,
+      color: theme.colors.text,
+      fontWeight: '500',
+    },
+    categoryTextSelected: {
+      color: theme.colors.primary,
+      fontWeight: '600',
+    },
+    animalList: {
+      padding: theme.spacing.md,
+    },
+    animalItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: theme.spacing.md,
+      borderRadius: theme.spacing.radius.lg,
+      marginBottom: theme.spacing.xs,
+      backgroundColor: theme.colors.surface,
+    },
+    animalItemSelected: {
+      backgroundColor: theme.colors.primary + '15',
+      borderWidth: 1,
+      borderColor: theme.colors.primary,
+    },
+    animalTag: {
+      ...theme.typography.styles.body,
+      color: theme.colors.text,
+      fontWeight: '600',
+    },
+    animalName: {
+      ...theme.typography.styles.caption,
+      color: theme.colors.textSecondary,
+      marginTop: 2,
+    },
+    animalSpecies: {
+      ...theme.typography.styles.caption,
+      color: theme.colors.textMuted,
+      fontSize: 11,
+      marginTop: 2,
+    },
+    feedList: {
+      padding: theme.spacing.md,
+    },
+    feedItem: {
+      padding: theme.spacing.md,
+      borderRadius: theme.spacing.radius.lg,
+      marginBottom: theme.spacing.xs,
+      backgroundColor: theme.colors.surface,
+    },
+    feedItemSelected: {
+      backgroundColor: theme.colors.primary + '15',
+      borderWidth: 1,
+      borderColor: theme.colors.primary,
+    },
+    feedName: {
+      ...theme.typography.styles.body,
+      color: theme.colors.text,
+      fontWeight: '600',
+    },
+    feedUnit: {
+      ...theme.typography.styles.caption,
+      color: theme.colors.textMuted,
+      fontSize: 11,
+      marginTop: 2,
+    },
+  });
+};

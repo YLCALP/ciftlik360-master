@@ -2,20 +2,21 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Formik } from 'formik';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Yup from 'yup';
 import { FlashMessageService } from '../../../../components/common/FlashMessage';
+import DetailHeader from '../../../../components/detail/DetailHeader';
+import DetailSection from '../../../../components/detail/DetailSection';
+import DetailButton from '../../../../components/forms/DetailButton';
+import DetailTextInput from '../../../../components/forms/DetailTextInput';
 import FormikDatePickerField from '../../../../components/forms/FormikDatePickerField';
 import FormikSelectorGrid from '../../../../components/forms/FormikSelectorGrid';
-import FormSubmitButton from '../../../../components/forms/FormSubmitButton';
-import FormTextInput from '../../../../components/forms/FormTextInput';
 import { animalsAPI } from '../../../../services/api';
 import { useTheme } from '../../../../themes';
 
@@ -121,140 +122,227 @@ export default function AnimalDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}><ActivityIndicator color={theme.colors.primary}/></View>
-      </SafeAreaView>
+      <View style={styles.container}>
+        <DetailHeader title="Yükleniyor..." />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator color={theme.colors.primary} size="large" />
+          <Text style={styles.loadingText}>Hayvan bilgileri yükleniyor...</Text>
+        </View>
+      </View>
     );
   }
 
   if (!animal) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}><Text style={styles.loadingText}>Hayvan bulunamadı</Text></View>
-      </SafeAreaView>
+      <View style={styles.container}>
+        <DetailHeader title="Hata" />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>Hayvan bulunamadı</Text>
+          <DetailButton 
+            title="Geri Dön" 
+            variant="outline" 
+            onPress={() => router.back()}
+            style={{ marginTop: theme.spacing.lg }}
+          />
+        </View>
+      </View>
     );
   }
 
+  const animalEmoji = speciesOptions.find(s => s.value === animal.species)?.emoji || '🐾';
+  const statusInfo = statusOptions.find(s => s.value === animal.status);
+
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Formik
         initialValues={animal}
         validationSchema={AnimalSchema}
         onSubmit={handleSave}
         enableReinitialize
       >
-        {({ values }) => (
-            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-                <View style={styles.header}>
-                    <Text style={styles.headerEmoji}>{speciesOptions.find(s => s.value === values.species)?.emoji || '🐾'}</Text>
-                    <Text style={styles.headerTitle}>{values.name || values.tag_number}</Text>
-                    <Text style={styles.headerSubtitle}>{getStatusText(values.status)}</Text>
-                </View>
+        {({ values, isSubmitting, handleSubmit }) => (
+          <>
+            <DetailHeader
+              title={values.name || values.tag_number}
+              subtitle={`Küpe No: ${values.tag_number}`}
+              emoji={animalEmoji}
+              statusBadge={{
+                status: values.status,
+                label: getStatusText(values.status)
+              }}
+              rightActions={[
+                {
+                  icon: { library: 'Feather', name: 'dollar-sign' },
+                  onPress: () => router.push(`/finances?animalId=${id}`)
+                }
+              ]}
+              gradient={true}
+            />
 
-                <View style={styles.form}>
-                    <FormikSelectorGrid name="species" label="Hayvan Türü" options={speciesOptions} />
+            <ScrollView 
+              style={styles.scrollView} 
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+            >
+              {/* Species Selection */}
+              <DetailSection
+                title="Hayvan Türü"
+                icon={{ library: 'MaterialCommunityIcons', name: 'cow' }}
+                showDivider={false}
+              >
+                <FormikSelectorGrid name="species" label="Hayvan Türü" options={speciesOptions} />
+              </DetailSection>
 
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Temel Bilgiler</Text>
-                        <FormTextInput name="tag_number" label="Küpe Numarası *" />
-                        <FormTextInput name="name" label="Hayvan Adı" />
-                        <FormikSelectorGrid name="gender" label="Cinsiyet" options={genderOptions} />
-                        <FormikDatePickerField name="birth_date" label="Doğum Tarihi" asString />
-                        <FormTextInput name="breed" label="Irk" />
-                        <FormTextInput name="weight" label="Ağırlık (kg)" keyboardType="numeric" />
-                    </View>
-                    
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Durum</Text>
-                        <FormikSelectorGrid name="status" options={statusOptions} />
-                    </View>
+              {/* Basic Information */}
+              <DetailSection
+                title="Temel Bilgiler"
+                subtitle="Hayvanın kimlik bilgileri"
+                icon={{ library: 'Feather', name: 'info' }}
+              >
+                <DetailTextInput 
+                  name="tag_number" 
+                  label="Küpe Numarası *" 
+                  prefixIcon={{ library: 'Feather', name: 'tag' }}
+                  clearable 
+                />
+                <DetailTextInput 
+                  name="name" 
+                  label="Hayvan Adı" 
+                  prefixIcon={{ library: 'Feather', name: 'type' }}
+                  placeholder="Örn: Papatya"
+                  clearable 
+                />
+                <FormikSelectorGrid name="gender" label="Cinsiyet" options={genderOptions} />
+                <FormikDatePickerField name="birth_date" label="Doğum Tarihi" asString />
+                <DetailTextInput 
+                  name="breed" 
+                  label="Irk" 
+                  placeholder="Örn: Holstein"
+                  clearable 
+                />
+                <DetailTextInput 
+                  name="weight" 
+                  label="Ağırlık" 
+                  keyboardType="numeric"
+                  suffixIcon={{ library: 'Feather', name: 'trending-up' }}
+                  placeholder="kg"
+                />
+              </DetailSection>
 
-                    <View style={styles.section}>
-                      <Text style={styles.sectionTitle}>Alış Bilgileri</Text>
-                      <FormTextInput name="purchase_price" label="Alış Fiyatı (₺)" keyboardType="numeric" />
-                      <FormikDatePickerField name="purchase_date" label="Alış Tarihi" asString />
-                    </View>
+              {/* Status */}
+              <DetailSection
+                title="Durum Bilgileri"
+                icon={{ library: 'Feather', name: 'activity' }}
+              >
+                <FormikSelectorGrid name="status" options={statusOptions} />
+              </DetailSection>
 
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Notlar</Text>
-                        <FormTextInput name="notes" multiline numberOfLines={4} />
-                    </View>
+              {/* Purchase Information */}
+              <DetailSection
+                title="Alış Bilgileri"
+                subtitle="Satın alma detayları"
+                icon={{ library: 'Feather', name: 'shopping-cart' }}
+                collapsible={true}
+              >
+                <DetailTextInput 
+                  name="purchase_price" 
+                  label="Alış Fiyatı" 
+                  keyboardType="numeric"
+                  prefixIcon={{ library: 'Feather', name: 'dollar-sign' }}
+                  placeholder="₺"
+                />
+                <FormikDatePickerField name="purchase_date" label="Alış Tarihi" asString />
+              </DetailSection>
 
-                    <FormSubmitButton title="Değişiklikleri Kaydet" />
+              {/* Notes */}
+              <DetailSection
+                title="Notlar"
+                subtitle="Ek bilgiler ve gözlemler"
+                icon={{ library: 'Feather', name: 'edit-3' }}
+                collapsible={true}
+              >
+                <DetailTextInput 
+                  name="notes" 
+                  label="Notlar"
+                  multiline 
+                  numberOfLines={4}
+                  placeholder="Hayvan hakkında notlarınızı yazın..."
+                  style={{ height: 100, textAlignVertical: 'top' }}
+                />
+              </DetailSection>
 
-                    <View style={styles.financialSection}>
-                        <Text style={styles.sectionTitle}>Finansal İşlemler</Text>
-                        <TouchableOpacity style={styles.financialButton} onPress={() => router.push(`/finances?animalId=${id}`)}>
-                            <Text style={styles.financialButtonText}>Bu Hayvana Ait İşlemleri Görüntüle</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
+              {/* Action Buttons */}
+              <View style={styles.actionSection}>
+                <DetailButton
+                  title="Değişiklikleri Kaydet"
+                  onPress={handleSubmit}
+                  loading={isSubmitting}
+                  leadingIcon={{ library: 'Feather', name: 'save' }}
+                  fullWidth
+                  size="lg"
+                />
+
+                <DetailButton
+                  title="Finansal İşlemler"
+                  variant="outline"
+                  onPress={() => router.push(`/finances?animalId=${id}`)}
+                  leadingIcon={{ library: 'Feather', name: 'dollar-sign' }}
+                  fullWidth
+                  style={{ marginTop: theme.spacing.md }}
+                />
+              </View>
             </ScrollView>
+          </>
         )}
       </Formik>
-    </SafeAreaView>
+    </View>
   );
 }
 
-const getStyles = (theme) => StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: theme.colors.background,
+const getStyles = (theme) => {
+  const { width } = Dimensions.get('window');
+  const isTablet = width >= 768;
+  
+  return StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.xl,
+  },
+  loadingText: {
+    ...theme.typography.styles.bodyLarge,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.md,
+    textAlign: 'center',
+  },
+  errorText: {
+    ...theme.typography.styles.h4,
+    color: theme.colors.error,
+    textAlign: 'center',
+    marginBottom: theme.spacing.lg,
+  },
+  scrollView: {
+    flex: 1,
+  },
+    scrollContent: {
+      paddingHorizontal: isTablet ? theme.spacing.xl : theme.spacing.md,
+      paddingTop: theme.spacing.lg,
+      paddingBottom: theme.spacing.xl,
+      maxWidth: isTablet ? 800 : '100%',
+      alignSelf: isTablet ? 'center' : 'stretch',
+      width: '100%',
     },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    loadingText: {
-        ...theme.typography.styles.body,
-        color: theme.colors.textSecondary,
-    },
-    scrollView: {
-        flex: 1,
-    },
-    header: {
-        backgroundColor: theme.colors.card,
-        alignItems: 'center',
-        paddingVertical: theme.spacing['2xl'],
-        paddingHorizontal: theme.spacing.xl,
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border,
-    },
-    headerEmoji: {
-        fontSize: 48,
-        marginBottom: theme.spacing.md,
-    },
-    headerTitle: {
-        ...theme.typography.styles.h3,
-        color: theme.colors.text,
-    },
-    headerSubtitle: {
-        ...theme.typography.styles.body,
-        color: theme.colors.textSecondary,
-        marginTop: theme.spacing.xs,
-    },
-    form: {
-        padding: theme.spacing.lg,
-    },
-    section: {
-        marginBottom: theme.spacing.xl,
-    },
-    sectionTitle: {
-        ...theme.typography.styles.h4,
-        color: theme.colors.text,
-        marginBottom: theme.spacing.lg,
-    },
-    financialSection: {
-      marginTop: theme.spacing['2xl'],
-      paddingTop: theme.spacing.xl,
-      borderTopWidth: 1,
-      borderTopColor: theme.colors.border,
-    },
-    financialButton: {
-      ...theme.styles.button('outline'),
-    },
-    financialButtonText: {
-      ...theme.styles.text('button', 'primary'),
+    actionSection: {
+      paddingHorizontal: theme.spacing.sm,
+      marginTop: theme.spacing.xl,
+      maxWidth: isTablet ? 400 : '100%',
+      alignSelf: 'center',
+      width: '100%',
     },
 });
+};

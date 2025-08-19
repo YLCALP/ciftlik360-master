@@ -1,6 +1,6 @@
 import { useFormikContext } from 'formik';
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View, Platform } from 'react-native';
 import { useTheme } from '../../themes';
 
 export default function AuthTextInput({ name, label, style, ...props }) {
@@ -12,11 +12,17 @@ export default function AuthTextInput({ name, label, style, ...props }) {
   const hasError = touched[name] && errors[name];
   const inputState = hasError ? 'error' : isFocused ? 'focused' : 'default';
 
+  const inputStyle = [
+    theme.styles.input(inputState),
+    Platform.OS === 'ios' && styles.iosInput,
+    style
+  ];
+
   return (
     <View style={theme.components.formField.base}>
       {label && <Text style={[theme.typography.styles.label, { color: theme.colors.textSecondary, ...theme.components.formField.label }]}>{label}</Text>}
       <TextInput
-        style={[theme.styles.input(inputState), style]}
+        style={inputStyle}
         onChangeText={handleChange(name)}
         onBlur={(e) => {
           setIsFocused(false);
@@ -25,6 +31,8 @@ export default function AuthTextInput({ name, label, style, ...props }) {
         onFocus={() => setIsFocused(true)}
         value={values[name]}
         placeholderTextColor={theme.colors.textMuted}
+        textContentType={getTextContentType(name)}
+        autoComplete={getAutoComplete(name)}
         {...props}
       />
       {hasError && <Text style={styles.errorText}>{errors[name]}</Text>}
@@ -32,10 +40,40 @@ export default function AuthTextInput({ name, label, style, ...props }) {
   );
 }
 
+// iOS için textContentType ve autoComplete önerileri
+function getTextContentType(name) {
+  const mapping = {
+    email: 'emailAddress',
+    password: 'password',
+    name: 'name',
+    phone: 'telephoneNumber',
+    farmName: 'organizationName',
+  };
+  return mapping[name] || 'none';
+}
+
+function getAutoComplete(name) {
+  const mapping = {
+    email: 'email',
+    password: 'password',
+    name: 'name',
+    phone: 'tel',
+  };
+  return mapping[name] || 'off';
+}
+
 const getStyles = (theme) => StyleSheet.create({
   errorText: {
     ...theme.typography.styles.caption,
     color: theme.colors.error,
     marginTop: theme.spacing.xs,
+  },
+  // iOS için özel input stilleri
+  iosInput: {
+    height: 52,          // iOS'ta daha yüksek
+    paddingVertical: 18, // iOS'ta daha fazla dikey padding
+    paddingHorizontal: 20, // iOS'ta daha fazla yatay padding  
+    fontSize: 16,        // iOS'ta zoom engellemek için minimum 16px
+    lineHeight: 20,      // iOS'ta daha iyi hizalama
   },
 }); 

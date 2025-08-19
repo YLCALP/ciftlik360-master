@@ -1,17 +1,18 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashMessageService } from '../../../components/common/FlashMessage';
-import DatePickerField from '../../../components/forms/DatePickerField';
+import { Icon } from '../../../components/common/Icon';
+import { FinanceCard } from '../../../components/FinanceCard';
+import { SummaryCard } from '../../../components/SummaryCard';
 import { useAuth } from '../../../contexts/AuthContext';
 import { financialAPI } from '../../../services/api';
 import { useTheme } from '../../../themes/useTheme';
@@ -125,31 +126,6 @@ export default function FinancesScreen() {
     setPage(prev => prev + 1);
   };
 
-  const getCategoryDisplayName = (category) => {
-    const categoryNames = {
-      animal_purchase: 'Hayvan Alımı',
-      animal_sale: 'Hayvan Satışı',
-      feed_purchase: 'Yem Alımı',
-      veterinary: 'Veteriner',
-      medicine: 'İlaç',
-      vaccination: 'Aşı',
-      equipment: 'Ekipman',
-      maintenance: 'Bakım',
-      fuel: 'Yakıt',
-      electricity: 'Elektrik',
-      water: 'Su',
-      milk_sale: 'Süt Satışı',
-      egg_sale: 'Yumurta Satışı',
-      other_income: 'Diğer Gelir',
-      other_expense: 'Diğer Gider'
-    };
-    return categoryNames[category] || category;
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('tr-TR');
-  };
-
   const formatAmount = (amount) => {
     return new Intl.NumberFormat('tr-TR', {
       style: 'currency',
@@ -157,49 +133,16 @@ export default function FinancesScreen() {
     }).format(amount);
   };
 
+  const handleTransactionPress = useCallback((transaction) => {
+    router.push(`/finances/detail/${transaction.id}`);
+  }, []);
+
   const renderTransaction = (item, index) => (
-    <TouchableOpacity 
+    <FinanceCard
       key={item.id}
-      style={styles.transactionCard}
-      onPress={() => router.push(`/finances/detail/${item.id}`)}
-    >
-      <View style={styles.transactionHeader}>
-        <View style={styles.transactionInfo}>
-          <Text style={styles.transactionCategory}>
-            {getCategoryDisplayName(item.category)}
-          </Text>
-          <Text style={styles.transactionDate}>
-            {formatDate(item.date)}
-          </Text>
-          {item.animals && (
-            <Text style={styles.animalInfo}>
-              {item.animals.tag_number} - {item.animals.name}
-            </Text>
-          )}
-        </View>
-        <View style={styles.transactionAmount}>
-          <Text style={[
-            styles.amountText,
-            { color: item.type === 'income' ? theme.colors.text : theme.colors.textSecondary }
-          ]}>
-            {item.type === 'income' ? '+' : '-'}{formatAmount(Math.abs(item.amount))}
-          </Text>
-          {item.profit_loss && (
-            <Text style={[
-              styles.profitLoss,
-              { color: item.profit_loss > 0 ? theme.colors.success : theme.colors.error }
-            ]}>
-              Kâr/Zarar: {formatAmount(item.profit_loss)}
-            </Text>
-          )}
-        </View>
-      </View>
-      {item.description && (
-        <Text style={styles.transactionDescription}>
-          {item.description}
-        </Text>
-      )}
-    </TouchableOpacity>
+      transaction={item}
+      onPress={handleTransactionPress}
+    />
   );
 
   const FilterButton = ({ type, title }) => (
@@ -246,13 +189,13 @@ export default function FinancesScreen() {
             style={styles.reportButton}
             onPress={() => router.push('/finances/reports')}
           >
-            <Ionicons name="stats-chart" size={20} color={theme.colors.text} />
+            <Icon library="Feather" name="bar-chart-2" size={20} color={theme.colors.white} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => router.push('/finances/add')}
           >
-            <Ionicons name="add" size={24} color={theme.colors.primaryText} />
+            <Icon library="Feather" name="plus" size={24} color={theme.colors.primaryText} />
           </TouchableOpacity>
         </View>
       </View>
@@ -264,72 +207,54 @@ export default function FinancesScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Summary Cards */}
         <View style={styles.summaryContainer}>
-          <View style={styles.summaryCard}>
-            <View style={styles.summaryCardHeader}>
-              <Ionicons name="trending-up" size={24} color={theme.colors.success} />
-              <Text style={styles.summaryLabel}>{period === 'year' ? 'Yıllık Gelir' : 'Aylık Gelir'}</Text>
-            </View>
-            <Text style={styles.summaryAmount}>{formatAmount(summary.totalIncome)}</Text>
-          </View>
+          <SummaryCard
+            type="income"
+            label="Gelir"
+            amount={summary.totalIncome}
+            period={period}
+            formatAmount={formatAmount}
+          />
           
-          <View style={styles.summaryCard}>
-            <View style={styles.summaryCardHeader}>
-              <Ionicons name="trending-down" size={24} color={theme.colors.error} />
-              <Text style={styles.summaryLabel}>{period === 'year' ? 'Yıllık Gider' : 'Aylık Gider'}</Text>
-            </View>
-            <Text style={styles.summaryAmount}>{formatAmount(summary.totalExpense)}</Text>
-          </View>
+          <SummaryCard
+            type="expense"
+            label="Gider"
+            amount={summary.totalExpense}
+            period={period}
+            formatAmount={formatAmount}
+          />
           
-          <View style={[styles.summaryCard, styles.profitCard]}>
-            <View style={styles.summaryCardHeader}>
-              <Ionicons 
-                name={summary.totalProfit >= 0 ? "checkmark-circle" : "close-circle"} 
-                size={24} 
-                color={summary.totalProfit >= 0 ? theme.colors.success : theme.colors.error} 
-              />
-              <Text style={styles.summaryLabel}>{period === 'year' ? 'Yıllık Net Kâr/Zarar' : 'Net Kâr/Zarar'}</Text>
-            </View>
-            <Text style={[
-              styles.summaryAmount,
-              styles.profitAmount,
-              { color: summary.totalProfit >= 0 ? theme.colors.success : theme.colors.error }
-            ]}>
-              {formatAmount(summary.totalProfit)}
-            </Text>
-          </View>
+          <SummaryCard
+            type="profit"
+            label="Net Kâr/Zarar"
+            amount={summary.totalProfit}
+            period={period}
+            formatAmount={formatAmount}
+            isProfitCard={true}
+          />
         </View>
 
         {/* Period Filter */}
         <View style={styles.filterContainer}>
           <PeriodButton value="month" title="Aylık" />
           <PeriodButton value="year" title="Yıllık" />
-          <TouchableOpacity
-            style={[styles.filterButton, customRange.start && styles.filterButtonActive]}
-            onPress={() => setShowRangePicker(true)}
-          >
-            <Text style={[styles.filterButtonText, customRange.start && styles.filterButtonTextActive]}>Özel</Text>
-          </TouchableOpacity>
         </View>
 
-        {/* Filter Buttons */}
         <View style={styles.filterContainer}>
           <FilterButton type="all" title="Hepsi" />
           <FilterButton type="income" title="Gelirler" />
           <FilterButton type="expense" title="Giderler" />
         </View>
 
-        {/* Transactions List */}
         <View style={styles.transactionsContainer}>
           {loading ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="hourglass-outline" size={64} color={theme.colors.textMuted} />
+              <Icon library="Feather" name="clock" size={64} color={theme.colors.textMuted} />
               <Text style={styles.emptyText}>Yükleniyor...</Text>
             </View>
           ) : transactions.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="receipt-outline" size={64} color={theme.colors.textMuted} />
+              <Icon library="Feather" name="file-text" size={64} color={theme.colors.textMuted} />
               <Text style={styles.emptyText}>Henüz finansal işlem bulunmuyor</Text>
               <TouchableOpacity
                 style={styles.emptyButton}
@@ -341,81 +266,11 @@ export default function FinancesScreen() {
           ) : (
             <>
               {transactions.map((item, index) => renderTransaction(item, index))}
-              <TouchableOpacity style={styles.loadMoreBtn} onPress={loadMore}>
-                <Text style={styles.loadMoreText}>Daha Fazla Yükle</Text>
-              </TouchableOpacity>
+             
             </>
           )}
         </View>
       </ScrollView>
-      {showRangePicker && (
-        <View style={styles.rangeOverlay}>
-          <View style={styles.rangeCard}>
-            <Text style={styles.rangeTitle}>Özel Tarih Aralığı</Text>
-            <TouchableOpacity onPress={() => setShowRangePicker(false)} style={{ position: 'absolute', right: 12, top: 12 }}>
-              <Ionicons name="close" size={22} color={theme.colors.text} />
-            </TouchableOpacity>
-            <View style={{ height: 12 }} />
-            <DatePickerField label="Başlangıç" value={rangeDraftStart} onChange={setRangeDraftStart} />
-            <DatePickerField label="Bitiş" value={rangeDraftEnd} onChange={setRangeDraftEnd} />
-            <View style={{ height: 8 }} />
-            <TouchableOpacity
-              style={[styles.filterButton, !(rangeDraftStart && rangeDraftEnd) && { opacity: 0.6 }]}
-              disabled={!(rangeDraftStart && rangeDraftEnd)}
-              onPress={() => {
-                setCustomRange({ start: rangeDraftStart, end: rangeDraftEnd });
-                setPage(0);
-                setShowRangePicker(false);
-                setTimeout(() => loadFinancialData(true), 0);
-              }}
-            >
-              <Text style={styles.filterButtonText}>Uygula</Text>
-            </TouchableOpacity>
-            <View style={{ height: 12 }} />
-            <TouchableOpacity
-              style={styles.filterButton}
-              onPress={() => {
-                // Basit seçim: son 7 gün
-                const end = new Date();
-                const start = new Date();
-                start.setDate(end.getDate() - 6);
-                setRangeDraftStart(start);
-                setRangeDraftEnd(end);
-              }}
-            >
-              <Text style={styles.filterButtonText}>Son 7 Gün</Text>
-            </TouchableOpacity>
-            <View style={{ height: 8 }} />
-            <TouchableOpacity
-              style={styles.filterButton}
-              onPress={() => {
-                // Bu yıl
-                const end = new Date();
-                const start = new Date(end.getFullYear(), 0, 1);
-                setRangeDraftStart(start);
-                setRangeDraftEnd(end);
-              }}
-            >
-              <Text style={styles.filterButtonText}>Bu Yıl</Text>
-            </TouchableOpacity>
-            <View style={{ height: 12 }} />
-            <TouchableOpacity
-              style={styles.filterButton}
-              onPress={() => {
-                // Özel aralığı temizle
-                setCustomRange({ start: null, end: null });
-                setRangeDraftStart(null);
-                setRangeDraftEnd(null);
-                setPage(0);
-                setShowRangePicker(false);
-                setTimeout(() => loadFinancialData(true), 0);
-              }}
-            >
-              <Text style={styles.filterButtonText}>Temizle</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
     </SafeAreaView>
   );
 }
@@ -432,191 +287,120 @@ const createStyles = (theme) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 16,
+    paddingHorizontal: theme.spacing.layout.screenPadding,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
     backgroundColor: theme.colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: theme.colors.borderLight,
+    marginBottom: 0,
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    ...theme.typography.styles.h2,
     color: theme.colors.text,
+    fontWeight: '700',
   },
   headerButtons: {
     flexDirection: 'row',
-    gap: 8,
+    gap: theme.spacing.sm,
   },
   reportButton: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    backgroundColor: theme.colors.success,
+    borderWidth: 0,
+    width: theme.spacing.sizes.button.heightSmall,
+    height: theme.spacing.sizes.button.heightSmall,
+    borderRadius: theme.spacing.radius.full,
     justifyContent: 'center',
     alignItems: 'center',
+    ...theme.spacing.shadows.md,
   },
   addButton: {
     backgroundColor: theme.colors.primary,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: theme.spacing.sizes.button.heightSmall,
+    height: theme.spacing.sizes.button.heightSmall,
+    borderRadius: theme.spacing.radius.full,
     justifyContent: 'center',
     alignItems: 'center',
+    ...theme.spacing.shadows.md,
   },
   summaryContainer: {
     backgroundColor: theme.colors.background,
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-  },
-  summaryCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  summaryCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  summaryLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: theme.colors.textSecondary,
-    marginLeft: 8,
-  },
-  summaryAmount: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-  },
-  profitCard: {
-    marginBottom: 0,
-  },
-  profitAmount: {
-    fontSize: 26,
-    fontWeight: 'bold',
+    paddingHorizontal: theme.spacing.layout.screenPadding,
+    paddingVertical: theme.spacing.layout.sectionGap,
   },
   filterContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: theme.colors.background,
-    gap: 8,
+    paddingHorizontal: theme.spacing.layout.screenPadding,
+    paddingVertical: theme.spacing.layout.contentGap,
+    backgroundColor: theme.colors.card,
+    gap: theme.spacing.sm,
+    ...theme.spacing.shadows.xs,
+    marginBottom: theme.spacing.sm,
   },
   filterButton: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    paddingVertical: theme.spacing.component.button.small.paddingVertical,
+    paddingHorizontal: theme.spacing.component.button.small.paddingHorizontal,
+    borderRadius: theme.spacing.component.button.small.radius,
+    backgroundColor: theme.colors.cardBackground,
+    borderWidth: 0,
     alignItems: 'center',
+    ...theme.spacing.shadows.sm,
   },
   filterButtonActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.success,
+    ...theme.spacing.shadows.md,
   },
   filterButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: theme.colors.textSecondary,
+    ...theme.typography.styles.buttonSmall,
+    color: theme.colors.text,
+    fontWeight: '600',
   },
   filterButtonTextActive: {
-    color: theme.colors.primaryText,
+    color: theme.colors.text,
+    fontWeight: '700',
   },
   transactionsContainer: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  transactionCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  transactionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  transactionInfo: {
-    flex: 1,
-  },
-  transactionCategory: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.text,
-    marginBottom: 2,
-  },
-  transactionDate: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginBottom: 2,
-  },
-  animalInfo: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    fontWeight: '500',
-  },
-  transactionAmount: {
-    alignItems: 'flex-end',
-  },
-  amountText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  profitLoss: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  transactionDescription: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginTop: 8,
-    fontStyle: 'italic',
+    paddingHorizontal: theme.spacing.layout.screenPadding,
+    paddingVertical: theme.spacing.layout.contentGap,
+    paddingBottom: theme.spacing.layout.sectionGapLarge,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 64,
+    paddingVertical: theme.spacing['8xl'],
   },
   emptyText: {
-    fontSize: 16,
+    ...theme.typography.styles.bodyLarge,
     color: theme.colors.textSecondary,
-    marginTop: 16,
-    marginBottom: 24,
+    marginTop: theme.spacing.layout.contentGap,
+    marginBottom: theme.spacing.layout.sectionGap,
     textAlign: 'center',
   },
   emptyButton: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    backgroundColor: theme.colors.success,
+    paddingVertical: theme.spacing.component.button.paddingVertical,
+    paddingHorizontal: theme.spacing.component.button.paddingHorizontal,
+    borderRadius: theme.spacing.component.button.radius,
+    ...theme.spacing.shadows.lg,
+    shadowColor: theme.colors.success,
   },
   emptyButtonText: {
-    color: theme.colors.primaryText,
-    fontWeight: '600',
+    ...theme.typography.styles.button,
+    color: theme.colors.white,
+    fontWeight: '700',
   },
   loadMoreBtn: {
-    marginTop: 8,
-    paddingVertical: 12,
-    borderRadius: 8,
+    marginTop: theme.spacing.sm,
+    paddingVertical: theme.spacing.component.button.small.paddingVertical,
+    borderRadius: theme.spacing.component.button.small.radius,
     alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.cardBackground,
+    borderWidth: 0,
+    ...theme.spacing.shadows.sm,
   },
   loadMoreText: {
+    ...theme.typography.styles.buttonSmall,
     color: theme.colors.text,
     fontWeight: '600',
   },
@@ -631,16 +415,16 @@ const createStyles = (theme) => StyleSheet.create({
   },
   rangeCard: {
     backgroundColor: theme.colors.card,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderTopLeftRadius: theme.spacing.component.modal.borderRadius,
+    borderTopRightRadius: theme.spacing.component.modal.borderRadius,
+    padding: theme.spacing.component.modal.padding,
+    borderWidth: 0,
+    ...theme.spacing.shadows['2xl'],
   },
   rangeTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...theme.typography.styles.h4,
     color: theme.colors.text,
     textAlign: 'center',
+    fontWeight: '700',
   },
 }); 

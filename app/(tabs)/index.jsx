@@ -10,7 +10,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashMessageService } from '../../components/common/FlashMessage';
+import { Icon } from '../../components/common/Icon';
 import { StatsCard } from '../../components/dashboard/StatsCard';
+import { getStatIcon } from '../../constants/iconMappings';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   animalsAPI,
@@ -48,38 +50,26 @@ export default function DashboardScreen() {
     try {
       !refreshing && setLoading(true);
       
+      // Bu ayın başlangıç ve bitiş tarihlerini hesapla
+      const today = new Date();
+      const startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+      const endDate = today.toISOString().split('T')[0];
+      
       const [
         animalsData,
         feedsData,
-        financialData,
+        financialReport,
         userProfile,
       ] = await Promise.all([
         animalsAPI.getAnimals(),
         feedAPI.getFeeds(),
-        financialAPI.getTransactions(),
+        financialAPI.getFinancialReport(startDate, endDate),
         userAPI.getUserProfile(),
       ]);
-
-      console.log("KULLANICI PROFİLİ",userProfile);
-
-      // Kullanıcı adını ayarla
-      if (userProfile && userProfile.name) {
-        setUserName(userProfile.name);
-      } else if (user) {
-        setUserName(user.email.split('@')[0]);
-      }
 
       // İstatistikleri hesapla
       const animalCount = animalsData?.length || 0;
       const feedCount = feedsData?.length || 0;
-      
-      const totalIncome = financialData
-        ?.filter(t => t.type === 'income')
-        ?.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0) || 0;
-      
-      const totalExpense = financialData
-        ?.filter(t => t.type === 'expense')
-        ?.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0) || 0;
 
       setDashboardData({
         stats: {
@@ -88,14 +78,14 @@ export default function DashboardScreen() {
           tasksCount: 0,
           pendingTasksCount: 0,
         },
-        recentTransactions: financialData?.slice(0, 5) || [],
+        recentTransactions: [],
         lowStockItems: [],
       });
 
       setFinancialSummary({
-        totalIncome,
-        totalExpenses: totalExpense,
-        netIncome: totalIncome - totalExpense,
+        totalIncome: financialReport?.totalIncome || 0,
+        totalExpenses: financialReport?.totalExpense || 0,
+        netIncome: financialReport?.totalProfit || 0,
       });
     } catch (error) {
       console.error('Dashboard data error:', error);
@@ -132,28 +122,23 @@ export default function DashboardScreen() {
     return formatted;
   };
 
-  if (loading && !refreshing) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Yükleniyor...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
- 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.logoContainer}>
-            <Text style={styles.logoEmoji}>🐄</Text>
-            <View style={styles.headerTextContainer}>
-              <Text style={styles.headerTitle}>Çiftlik365</Text>
-              <Text style={styles.headerSubtitle}>
-                Hoş geldiniz, {userName || 'Çiftçi'}
-              </Text>
-            </View>
+            <Icon 
+              library="MaterialCommunityIcons" 
+              name="cow" 
+              size={32} 
+              color="#8B4513"
+            />
+          </View>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Çiftlik365</Text>
+            <Text style={styles.headerSubtitle}>
+              Merhaba, {userName || 'Çiftçi'}
+            </Text>
           </View>
         </View>
         <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/explore')}>
@@ -170,8 +155,6 @@ export default function DashboardScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />
         }>
-        
-        {/* İstatistik Kartları */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Genel Durum</Text>
           <View style={styles.statsGrid}>
@@ -180,53 +163,38 @@ export default function DashboardScreen() {
                 title="Hayvanlarım"
                 value={dashboardData.stats.animalsCount}
                 subtitle="Toplam hayvan sayısı"
-                icon="🐄"
+                icon={getStatIcon('animals').name}
+                iconLibrary={getStatIcon('animals').library}
+                iconColor={getStatIcon('animals').color}
+                iconBgColor={getStatIcon('animals').bgColor}
                 onPress={() => router.push('/animals')}
-              />
-              <StatsCard
-                title="Net Gelir"
-                value={formatCurrency(financialSummary.netIncome)}
-                subtitle="Bu ay"
-                icon="💰"
-                valueColor={financialSummary.netIncome >= 0 ? theme.colors.success : theme.colors.error}
-                onPress={() => router.push('/finances')}
-              />
-            </View>
-            <View style={styles.statsRow}>
-              <StatsCard
-                title="Bekleyen Görevler"
-                value={dashboardData.stats.pendingTasksCount}
-                subtitle={`${dashboardData.stats.tasksCount} görevden`}
-                icon="📋"
-                valueColor={theme.colors.error}
-                onPress={() => router.push('/tasks')}
               />
               <StatsCard
                 title="Yem Stokları"
                 value={dashboardData.stats.feedsCount || 0}
                 subtitle="Toplam yem çeşidi"
-                icon="🌾"
+                icon={getStatIcon('feeds').name}
+                iconLibrary={getStatIcon('feeds').library}
+                iconColor={getStatIcon('feeds').color}
+                iconBgColor={getStatIcon('feeds').bgColor}
                 onPress={() => router.push('/feeds')}
+              />
+            </View>
+            <View style={styles.statsRow}>
+            <StatsCard
+                title="Net Gelir"
+                value={formatCurrency(financialSummary.netIncome)}
+                subtitle="Bu ay"
+                icon={getStatIcon('netIncome').name}
+                iconLibrary={getStatIcon('netIncome').library}
+                iconColor={getStatIcon('netIncome').color}
+                iconBgColor={getStatIcon('netIncome').bgColor}
+                valueColor={financialSummary.netIncome >= 0 ? theme.colors.success : theme.colors.error}
+                onPress={() => router.push('/finances')}
               />
             </View>
           </View>
         </View>
-        {/* Düşük Stok Uyarıları */}
-        {dashboardData.lowStockItems.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>⚠️ Düşük Stok Uyarıları</Text>
-            {dashboardData.lowStockItems.map((item, index) => (
-              <View key={index} style={styles.alertCard}>
-                <Text style={styles.alertText}>
-                  {item.item_name}: {item.quantity} {item.unit}
-                </Text>
-                <Text style={styles.alertSubtext}>
-                  Minimum: {item.min_threshold} {item.unit}
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -241,102 +209,125 @@ const getStyles = (theme) => StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: theme.colors.background,
   },
   loadingText: {
-    ...theme.typography.styles.body,
+    ...theme.typography.styles.bodyLarge,
     color: theme.colors.textSecondary,
   },
   header: {
     backgroundColor: theme.colors.background,
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.layout.screenPadding,
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.md,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: theme.colors.borderLight,
+    marginBottom: 0,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   logoContainer: {
-    flexDirection: 'row',
+    width: theme.spacing.iconSizes['4xl'],
+    height: theme.spacing.iconSizes['4xl'],
+    backgroundColor: '#FFF5E6',
+    borderRadius: theme.spacing.radius.xl,
+    justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
   },
   logoEmoji: {
-    fontSize: 20,
-    marginRight: theme.spacing.sm,
+    fontSize: theme.spacing.iconSizes['2xl'],
   },
   headerTextContainer: {
-    marginLeft: theme.spacing.sm,
+    marginLeft: theme.spacing.md,
+    flex: 1,
   },
   headerTitle: {
     ...theme.typography.styles.h4,
     color: theme.colors.text,
+    fontWeight: '700',
   },
   headerSubtitle: {
-    ...theme.typography.styles.caption,
+    ...theme.typography.styles.bodySmall,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
   profileButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.surface,
+    width: theme.spacing.sizes.avatar.lg,
+    height: theme.spacing.sizes.avatar.lg,
+    borderRadius: theme.spacing.radius.full,
+    backgroundColor: '#E6F0FF',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
   },
   profileIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: theme.colors.surface,
+    width: theme.spacing.sizes.avatar.md,
+    height: theme.spacing.sizes.avatar.md,
+    borderRadius: theme.spacing.radius.full,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
   },
   profileText: {
     ...theme.typography.styles.h5,
-    color: theme.colors.primary,
+    color: '#3b82f6',
+    fontWeight: '700',
   },
   scrollView: {
     flex: 1,
+    backgroundColor: theme.colors.background,
   },
   section: {
-    padding: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.layout.screenPadding,
+    paddingVertical: theme.spacing.layout.contentGap,
   },
   sectionTitle: {
     ...theme.typography.styles.h3,
     color: theme.colors.text,
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.layout.contentGap,
+    fontWeight: '700',
   },
   statsGrid: {
-    gap: theme.spacing.sm,
+    gap: theme.spacing.layout.gridGap,
   },
   statsRow: {
     flexDirection: 'row',
-    marginHorizontal: -theme.spacing.sm,
+    gap: theme.spacing.layout.gridGap,
   },
   quickActionsContainer: {
-    marginHorizontal: -theme.spacing.sm,
+    gap: theme.spacing.layout.gridGap,
   },
   alertCard: {
-    backgroundColor: theme.colors.warningMuted,
-    padding: theme.spacing.md,
-    borderRadius: theme.spacing.radius.lg,
-    marginVertical: theme.spacing.xs,
+    backgroundColor: theme.colors.card,
+    padding: theme.spacing.component.card.padding,
+    borderRadius: theme.spacing.component.card.radius,
+    marginVertical: theme.spacing.component.card.marginSmall,
     borderLeftWidth: 4,
     borderLeftColor: theme.colors.warning,
+    ...theme.spacing.shadows.md,
   },
   alertText: {
     ...theme.typography.styles.body,
-    color: theme.colors.warningText,
+    color: theme.colors.text,
+    fontWeight: '600',
   },
   alertSubtext: {
-    ...theme.typography.styles.caption,
-    color: theme.colors.warningText,
+    ...theme.typography.styles.bodySmall,
+    color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
   },
 });

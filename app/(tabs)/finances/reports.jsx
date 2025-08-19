@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Icon } from '../../../components/common/Icon';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -138,7 +138,7 @@ export default function FinancialReportsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
+          <Icon library="Feather" name="arrow-left" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>Finansal Raporlar</Text>
         <View style={{ width: 24 }} />

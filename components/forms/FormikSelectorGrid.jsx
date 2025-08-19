@@ -11,7 +11,7 @@ export default function FormikSelectorGrid({ name, label, options }) {
   const selectedValue = values[name];
 
   return (
-    <View style={theme.components.formField.base}>
+    <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
       <View style={styles.grid}>
         {options.map((option) => {
@@ -34,10 +34,13 @@ export default function FormikSelectorGrid({ name, label, options }) {
 }
 
 const getStyles = (theme) => StyleSheet.create({
+    container: {
+        marginBottom: theme.spacing.md,
+    },
     label: {
         ...theme.typography.styles.h4,
         color: theme.colors.text,
-        marginBottom: theme.spacing.lg,
+        marginBottom: theme.spacing.md,
     },
     grid: {
         flexDirection: 'row',

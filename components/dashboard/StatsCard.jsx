@@ -1,10 +1,11 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../themes';
+import { CardIcon } from '../common/Icon';
 
-export function StatsCard({ title, value, subtitle, icon, valueColor, onPress }) {
+export function StatsCard({ title, value, subtitle, icon, iconLibrary = 'Feather', iconColor, iconBgColor, valueColor, onPress }) {
   const theme = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, iconBgColor);
 
   const valueStyle = [
     styles.value,
@@ -24,7 +25,12 @@ export function StatsCard({ title, value, subtitle, icon, valueColor, onPress })
     >
         <View style={styles.topSection}>
           <View style={styles.iconContainer}>
-            <Text style={styles.icon}>{icon}</Text>
+            <CardIcon 
+              library={iconLibrary}
+              name={icon}
+              color={iconColor || theme.colors.text}
+              size={28}
+            />
           </View>
         </View>
         
@@ -46,59 +52,64 @@ export function StatsCard({ title, value, subtitle, icon, valueColor, onPress })
   );
 }
 
-const getStyles = (theme) => StyleSheet.create({
+const getStyles = (theme, iconBgColor) => StyleSheet.create({
   card: {
     flex: 1,
     backgroundColor: theme.colors.card,
-    borderRadius: theme.spacing.radius['2xl'],
-    padding: theme.spacing.xl,
-    margin: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderRadius: theme.spacing.component.card.radius,
+    padding: theme.spacing.component.card.padding,
+    borderWidth: 0,
     justifyContent: 'space-between',
-    minHeight: 160,
-    ...theme.spacing.shadows.md,
+    minHeight: theme.spacing.sizes.farm.dashboardCardHeight,
+    ...theme.spacing.shadows.lg,
+    shadowColor: theme.colors.primary,
   },
   topSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    marginBottom: theme.spacing.component.stats.iconGap,
   },
   iconContainer: {
-    width: 50,
-    height: 50,
-    backgroundColor: theme.colors.surface,
+    width: theme.spacing.iconSizes['3xl'],
+    height: theme.spacing.iconSizes['3xl'],
+    backgroundColor: iconBgColor || theme.colors.backgroundSecondary,
     borderRadius: theme.spacing.radius.xl,
     justifyContent: 'center',
     alignItems: 'center',
+    opacity: 0.9,
   },
   icon: {
-    fontSize: 30,
+    fontSize: theme.spacing.iconSizes.lg,
   },
   middleSection: {
     flex: 1,
     justifyContent: 'center',
+    marginBottom: theme.spacing.component.stats.numberGap,
   },
   value: {
-    ...theme.typography.styles.h1,
+    ...theme.typography.styles.statNumber,
     color: theme.colors.text,
-    marginLeft: 6,
+    fontWeight: '800',
   },
   valueMedium: {
-    fontSize: theme.typography.sizes['3xl'],
+    fontSize: theme.typography.sizes['4xl'],
+    fontWeight: '700',
   },
   valueSmall: {
-    fontSize: theme.typography.sizes['2xl'],
+    fontSize: theme.typography.sizes['3xl'],
+    fontWeight: '700',
   },
   bottomSection: {
     gap: theme.spacing.xs,
   },
   title: {
-    ...theme.typography.styles.h6,
+    ...theme.typography.styles.cardTitle,
     color: theme.colors.text,
+    fontWeight: '600',
   },
   subtitle: {
-    ...theme.typography.styles.caption,
+    ...theme.typography.styles.cardSubtitle,
     color: theme.colors.textSecondary,
   },
 }); 

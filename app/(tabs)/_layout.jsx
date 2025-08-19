@@ -1,43 +1,35 @@
-import { Tabs, useRouter } from 'expo-router';
+import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform, StyleSheet } from 'react-native';
 
-import { Ionicons } from '@expo/vector-icons';
+import { TabBarIcon } from '../../components/common/Icon';
+import { getTabIcon } from '../../constants/iconMappings';
 import { useTheme } from '../../themes/useTheme';
 
 export default function TabLayout() {
   const theme = useTheme();
-  const router = useRouter();
-
-  const handleAnimalsTabPress = () => {
-    // Animals tab'ına basıldığında her zaman index sayfasına git
-    router.replace('/animals');
-  };
-
-  const handleFeedsTabPress = () => {
-    // Feeds tab'ına basıldığında her zaman index sayfasına git
-    router.replace('/feeds');
-  };
-
-  const handleFinancesTabPress = () => {
-    // Finances tab'ına basıldığında her zaman index sayfasına git
-    router.replace('/finances');
-  };
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        lazy: true,
         tabBarActiveTintColor: theme.colors.tabIconSelected,
         tabBarInactiveTintColor: theme.colors.tabIconDefault,
         tabBarStyle: {
-          ...theme.styles.tabBar?.base || styles.tabBar,
+          ...styles.tabBar,
           backgroundColor: theme.colors.tabBackground,
-          borderTopColor: theme.colors.border,
+          borderTopWidth: 0,
+          ...theme.spacing.shadows.lg,
+          shadowColor: theme.colors.primary,
         },
         tabBarLabelStyle: {
           ...theme.typography.styles.tabLabel,
-          marginBottom: Platform.OS === 'android' ? 2 : 0,
+          marginBottom: Platform.OS === 'android' ? 0 : 0,
+          fontWeight: '700',
+        },
+        tabBarIconStyle: {
+          marginTop: 0,
         },
         tabBarHideOnKeyboard: true,
       }}
@@ -47,23 +39,35 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" color={color} size={size} />
-          ),
+          tabBarIcon: ({ color, size, focused }) => {
+            const icon = getTabIcon('dashboard', focused);
+            return (
+              <TabBarIcon
+                library={icon.library}
+                name={icon.name}
+                color={color}
+                size={size}
+                focused={focused}
+              />
+            );
+          },
         }}
       />
       <Tabs.Screen
         name="animals"
         options={{
           title: 'Hayvanlar',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="paw-outline" color={color} size={size} />
-          ),
-        }}
-        listeners={{
-          tabPress: (e) => {
-            e.preventDefault();
-            handleAnimalsTabPress();
+          tabBarIcon: ({ color, size, focused }) => {
+            const icon = getTabIcon('animals', focused);
+            return (
+              <TabBarIcon
+                library={icon.library}
+                name={icon.name}
+                color={color}
+                size={size}
+                focused={focused}
+              />
+            );
           },
         }}
       />
@@ -71,14 +75,17 @@ export default function TabLayout() {
         name="feeds"
         options={{
           title: 'Yemler',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="leaf-outline" color={color} size={size} />
-          ),
-        }}
-        listeners={{
-          tabPress: (e) => {
-            e.preventDefault();
-            handleFeedsTabPress();
+          tabBarIcon: ({ color, size, focused }) => {
+            const icon = getTabIcon('feeds', focused);
+            return (
+              <TabBarIcon
+                library={icon.library}
+                name={icon.name}
+                color={color}
+                size={size}
+                focused={focused}
+              />
+            );
           },
         }}
       />
@@ -86,14 +93,17 @@ export default function TabLayout() {
         name="finances"
         options={{
           title: 'Finans',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="cash-outline" color={color} size={size} />
-          ),
-        }}
-        listeners={{
-          tabPress: (e) => {
-            e.preventDefault();
-            handleFinancesTabPress();
+          tabBarIcon: ({ color, size, focused }) => {
+            const icon = getTabIcon('finances', focused);
+            return (
+              <TabBarIcon
+                library={icon.library}
+                name={icon.name}
+                color={color}
+                size={size}
+                focused={focused}
+              />
+            );
           },
         }}
       />
@@ -101,9 +111,18 @@ export default function TabLayout() {
         name="explore"
         options={{
           title: 'Profil',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" color={color} size={size} />
-          ),
+          tabBarIcon: ({ color, size, focused }) => {
+            const icon = getTabIcon('profile', focused);
+            return (
+              <TabBarIcon
+                library={icon.library}
+                name={icon.name}
+                color={color}
+                size={size}
+                focused={focused}
+              />
+            );
+          },
         }}
       />
     </Tabs>
@@ -112,9 +131,10 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    height: Platform.OS === 'android' ? 75 : 85,
-    paddingBottom: Platform.OS === 'android' ? 30 : 30,
+    height: Platform.OS === 'android' ? 70 : 80,
+    paddingBottom: Platform.OS === 'android' ? 15 : 20,
     paddingTop: 8,
+    paddingHorizontal: 8,
   },
 });
 

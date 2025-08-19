@@ -352,6 +352,69 @@ export const financialAPI = {
     }
   },
 
+  // Tekil işlem getir
+  async getTransaction(id) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*, animals(*)')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Get transaction error:', error);
+      throw error;
+    }
+  },
+
+  // İşlem güncelle
+  async updateTransaction(id, transactionData) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .update(transactionData)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Update transaction error:', error);
+      throw error;
+    }
+  },
+
+  // İşlem sil
+  async deleteTransaction(id) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Delete transaction error:', error);
+      throw error;
+    }
+  },
+
   // Finansal rapor getir
   async getFinancialReport(startDate, endDate) {
     try {

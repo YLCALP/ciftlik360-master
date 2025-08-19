@@ -14,16 +14,16 @@ export default function FeedsLayout() {
         name="add" 
         options={{ 
           title: 'Yem Ekle',
-          headerShown: true,
-          headerBackTitle: 'Geri'
+          headerShown: false,
+          tabBarStyle: { display: 'none' }
         }} 
       />
       <Stack.Screen 
         name="detail/[id]" 
         options={{ 
           title: 'Yem Detayı',
-          headerShown: true,
-          headerBackTitle: 'Geri'
+          headerShown: false,
+          tabBarStyle: { display: 'none' }
         }} 
       />
     </Stack>

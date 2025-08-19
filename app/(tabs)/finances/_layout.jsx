@@ -19,6 +19,7 @@ export default function FinancesLayout() {
         name="detail/[id]" 
         options={{
           headerShown: false,
+          tabBarStyle: { display: 'none' }
         }}
       />
       <Stack.Screen 

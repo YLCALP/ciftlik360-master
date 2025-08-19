@@ -1,30 +1,29 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Dimensions,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashMessageService } from '../../../../components/common/FlashMessage';
+import DetailHeader from '../../../../components/detail/DetailHeader';
+import DetailSection from '../../../../components/detail/DetailSection';
+import DetailButton from '../../../../components/forms/DetailButton';
 import { financialAPI } from '../../../../services/api';
-import { useTheme } from '../../../../themes/useTheme';
+import { useTheme } from '../../../../themes';
 
 export default function FinancialTransactionDetailScreen() {
   const { id } = useLocalSearchParams();
   const [transaction, setTransaction] = useState(null);
   const [loading, setLoading] = useState(true);
   const theme = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const styles = getStyles(theme);
 
-  useEffect(() => {
-    loadTransaction();
-  }, [id]);
-
-  const loadTransaction = async () => {
+  const loadTransaction = useCallback(async () => {
     try {
       setLoading(true);
       const data = await financialAPI.getTransaction(id);
@@ -41,7 +40,9 @@ export default function FinancialTransactionDetailScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => { loadTransaction(); }, [loadTransaction]);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('tr-TR');
@@ -83,134 +84,193 @@ export default function FinancialTransactionDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
+        <DetailHeader title="Yükleniyor..." />
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Yükleniyor...</Text>
+          <ActivityIndicator color={theme.colors.primary} size="large" />
+          <Text style={styles.loadingText}>İşlem bilgileri yükleniyor...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!transaction) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.title}>İşlem Bulunamadı</Text>
-          <View style={{ width: 24 }} />
-        </View>
-        <View style={styles.errorContainer}>
+      <View style={styles.container}>
+        <DetailHeader title="Hata" />
+        <View style={styles.loadingContainer}>
           <Text style={styles.errorText}>İşlem bulunamadı</Text>
+          <DetailButton 
+            title="Geri Dön" 
+            variant="outline" 
+            onPress={() => router.back()}
+            style={{ marginTop: theme.spacing.lg }}
+          />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.title}>İşlem Detayı</Text>
-        <View style={{ width: 24 }} />
-      </View>
+  const transactionIcon = transaction.type === 'income' ? 
+    { library: 'Feather', name: 'trending-up' } : 
+    { library: 'Feather', name: 'trending-down' };
+  
+  const statusBadge = {
+    status: transaction.type === 'income' ? 'success' : 'error',
+    label: getTypeDisplayName(transaction.type)
+  };
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Ana Bilgiler */}
-        <View style={styles.section}>
-          <View style={styles.amountContainer}>
+  return (
+    <View style={styles.container}>
+      <DetailHeader
+        title={getCategoryDisplayName(transaction.category)}
+        subtitle={`${formatDate(transaction.date)}`}
+        emoji={transaction.type === 'income' ? '💰' : '💸'}
+        statusBadge={statusBadge}
+        gradient={true}
+      />
+
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Amount Display */}
+        <DetailSection
+          title="Tutar"
+          subtitle="İşlem tutarı"
+          icon={transactionIcon}
+          showDivider={false}
+        >
+          <View style={styles.amountDisplay}>
             <Text style={[
-              styles.amount,
+              styles.amountText,
               { color: transaction.type === 'income' ? theme.colors.success : theme.colors.error }
             ]}>
               {transaction.type === 'income' ? '+' : '-'}{formatAmount(Math.abs(transaction.amount))}
             </Text>
-            <View style={[
-              styles.typeBadge,
-              { backgroundColor: transaction.type === 'income' ? theme.colors.success.replace('1', '0.1') : theme.colors.error.replace('1', '0.1') }
-            ]}>
+          </View>
+        </DetailSection>
+
+        {/* Transaction Details */}
+        <DetailSection
+          title="İşlem Detayları"
+          subtitle="Temel bilgiler"
+          icon={{ library: 'Feather', name: 'info' }}
+        >
+          <View style={styles.detailsGrid}>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Kategori</Text>
+              <Text style={styles.detailValue}>{getCategoryDisplayName(transaction.category)}</Text>
+            </View>
+            
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Tarih</Text>
+              <Text style={styles.detailValue}>{formatDate(transaction.date)}</Text>
+            </View>
+
+            {transaction.animals && (
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Hayvan</Text>
+                <Text style={styles.detailValue}>
+                  {transaction.animals.tag_number} - {transaction.animals.name}
+                </Text>
+              </View>
+            )}
+
+            {transaction.is_automatic && (
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>İşlem Türü</Text>
+                <Text style={styles.detailValue}>Otomatik</Text>
+              </View>
+            )}
+          </View>
+        </DetailSection>
+
+        {/* Description */}
+        {transaction.description && (
+          <DetailSection
+            title="Açıklama"
+            icon={{ library: 'Feather', name: 'file-text' }}
+            collapsible={true}
+          >
+            <View style={styles.descriptionContainer}>
+              <Text style={styles.descriptionText}>{transaction.description}</Text>
+            </View>
+          </DetailSection>
+        )}
+
+        {/* Profit/Loss */}
+        {transaction.profit_loss && (
+          <DetailSection
+            title="Kâr/Zarar Analizi"
+            icon={{ library: 'Feather', name: 'bar-chart-2' }}
+            collapsible={true}
+          >
+            <View style={styles.profitLossContainer}>
               <Text style={[
-                styles.typeText,
-                { color: transaction.type === 'income' ? theme.colors.success : theme.colors.error }
-              ]}>
-                {getTypeDisplayName(transaction.type)}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Detay Bilgiler */}
-        <View style={styles.section}>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Kategori</Text>
-            <Text style={styles.detailValue}>{getCategoryDisplayName(transaction.category)}</Text>
-          </View>
-          
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Tarih</Text>
-            <Text style={styles.detailValue}>{formatDate(transaction.date)}</Text>
-          </View>
-
-          {transaction.animals && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Hayvan</Text>
-              <Text style={styles.detailValue}>
-                {transaction.animals.tag_number} - {transaction.animals.name}
-              </Text>
-            </View>
-          )}
-
-          {transaction.description && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Açıklama</Text>
-              <Text style={styles.detailValue}>{transaction.description}</Text>
-            </View>
-          )}
-
-          {transaction.profit_loss && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Kâr/Zarar</Text>
-              <Text style={[
-                styles.detailValue,
+                styles.profitLossAmount,
                 { color: transaction.profit_loss > 0 ? theme.colors.success : theme.colors.error }
               ]}>
-                {formatAmount(transaction.profit_loss)}
+                {transaction.profit_loss > 0 ? '+' : ''}{formatAmount(transaction.profit_loss)}
+              </Text>
+              <Text style={styles.profitLossLabel}>
+                {transaction.profit_loss > 0 ? 'Kâr' : 'Zarar'}
               </Text>
             </View>
-          )}
+          </DetailSection>
+        )}
 
-          {transaction.is_automatic && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>İşlem Türü</Text>
-              <Text style={styles.detailValue}>Otomatik</Text>
+        {/* Technical Information */}
+        <DetailSection
+          title="Teknik Bilgiler"
+          subtitle="Sistem kayıtları"
+          icon={{ library: 'Feather', name: 'settings' }}
+          collapsible={true}
+        >
+          <View style={styles.detailsGrid}>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>İşlem ID</Text>
+              <Text style={[styles.detailValue, styles.idText]}>{transaction.id}</Text>
             </View>
-          )}
-        </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Oluşturulma</Text>
+              <Text style={styles.detailValue}>
+                {new Date(transaction.created_at).toLocaleString('tr-TR')}
+              </Text>
+            </View>
+          </View>
+        </DetailSection>
 
-        {/* İşlem ID */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Teknik Bilgiler</Text>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>İşlem ID</Text>
-            <Text style={[styles.detailValue, styles.idText]}>{transaction.id}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Oluşturulma</Text>
-            <Text style={styles.detailValue}>
-              {new Date(transaction.created_at).toLocaleString('tr-TR')}
-            </Text>
-          </View>
+        {/* Action Buttons */}
+        <View style={styles.actionSection}>
+          <DetailButton
+            title="İşlemi Düzenle"
+            variant="outline"
+            leadingIcon={{ library: 'Feather', name: 'edit-3' }}
+            fullWidth
+            onPress={() => router.push(`/finances/edit/${id}`)}
+          />
+
+          <DetailButton
+            title="Benzer İşlem Ekle"
+            variant="secondary"
+            leadingIcon={{ library: 'Feather', name: 'copy' }}
+            fullWidth
+            style={{ marginTop: theme.spacing.md }}
+            onPress={() => router.push(`/finances/add?template=${id}`)}
+          />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
-const createStyles = (theme) => StyleSheet.create({
+const getStyles = (theme) => {
+  const { width } = Dimensions.get('window');
+  const isTablet = width >= 768;
+  
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -219,92 +279,98 @@ const createStyles = (theme) => StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: theme.spacing.xl,
   },
   loadingText: {
-    fontSize: 16,
+    ...theme.typography.styles.bodyLarge,
     color: theme.colors.textSecondary,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginTop: theme.spacing.md,
+    textAlign: 'center',
   },
   errorText: {
-    fontSize: 16,
-    color: theme.colors.textSecondary,
+    ...theme.typography.styles.h4,
+    color: theme.colors.error,
+    textAlign: 'center',
+    marginBottom: theme.spacing.lg,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 16,
-    backgroundColor: theme.colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-  },
-  content: {
+  scrollView: {
     flex: 1,
   },
-  section: {
-    backgroundColor: theme.colors.card,
-    marginBottom: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-    marginBottom: 16,
-  },
-  amountContainer: {
+    scrollContent: {
+      paddingHorizontal: isTablet ? theme.spacing.xl : theme.spacing.md,
+      paddingTop: theme.spacing.lg,
+      paddingBottom: theme.spacing.xl,
+      maxWidth: isTablet ? 800 : '100%',
+      alignSelf: isTablet ? 'center' : 'stretch',
+      width: '100%',
+    },
+  amountDisplay: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: theme.spacing.xl,
   },
-  amount: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    marginBottom: 12,
+  amountText: {
+    ...theme.typography.styles.display,
+    fontSize: 42,
+    fontWeight: '800',
   },
-  typeBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+  detailsGrid: {
+    gap: theme.spacing.lg,
   },
-  typeText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  detailRow: {
+  detailItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    paddingVertical: theme.spacing.sm,
   },
   detailLabel: {
-    fontSize: 16,
+    ...theme.typography.styles.body,
     color: theme.colors.textSecondary,
     flex: 1,
+    fontWeight: '500',
   },
   detailValue: {
-    fontSize: 16,
+    ...theme.typography.styles.bodyLarge,
     color: theme.colors.text,
-    fontWeight: '500',
+    fontWeight: '600',
     flex: 2,
     textAlign: 'right',
   },
-  idText: {
-    fontSize: 12,
-    fontFamily: 'monospace',
-    color: theme.colors.textMuted,
+  descriptionContainer: {
+    paddingVertical: theme.spacing.md,
   },
-}); 
+  descriptionText: {
+    ...theme.typography.styles.body,
+    color: theme.colors.text,
+    lineHeight: 24,
+  },
+  profitLossContainer: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.lg,
+  },
+  profitLossAmount: {
+    ...theme.typography.styles.h2,
+    fontWeight: '700',
+    marginBottom: theme.spacing.xs,
+  },
+  profitLossLabel: {
+    ...theme.typography.styles.caption,
+    color: theme.colors.textSecondary,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  idText: {
+    ...theme.typography.styles.caption,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    color: theme.colors.textMuted,
+    fontSize: 11,
+  },
+    actionSection: {
+      paddingHorizontal: theme.spacing.sm,
+      marginTop: theme.spacing.xl,
+      maxWidth: isTablet ? 400 : '100%',
+      alignSelf: 'center',
+      width: '100%',
+    },
+});
+};

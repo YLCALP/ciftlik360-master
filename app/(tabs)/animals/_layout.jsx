@@ -17,7 +17,7 @@ export default function AnimalsLayout() {
         name="add" 
         options={{ 
           title: 'Hayvan Ekle',
-          headerShown: true,
+          headerShown: false,
           headerBackTitle: 'Geri'
         }} 
       />
@@ -25,8 +25,8 @@ export default function AnimalsLayout() {
         name="detail/[id]" 
         options={{ 
           title: 'Hayvan Detayı',
-          headerShown: true,
-          headerBackTitle: 'Geri'
+          headerShown: false,
+          tabBarStyle: { display: 'none' }
         }} 
       />
     </Stack>

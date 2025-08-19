@@ -1,6 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
+import { Icon } from '../../components/common/Icon';
 import {
     ScrollView,
     StyleSheet,
@@ -151,7 +151,7 @@ const SettingsScreen = () => {
           {/* Dark Mode */}
           <View style={styles.card}>
             <View style={styles.cardIcon}>
-              <Ionicons name="moon-outline" size={24} color={theme.colors.text} />
+              <Icon library="Feather" name="moon" size={24} color={theme.colors.text} />
             </View>
             <View style={styles.cardTextContainer}>
               <Text style={styles.cardTitle}>Karanlık Mod</Text>
@@ -174,14 +174,15 @@ const SettingsScreen = () => {
               onPress={item.action}
             >
               <View style={styles.cardIcon}>
-                <Ionicons name={item.icon} size={24} color={theme.colors.text} />
+                <Icon library="Ionicons" name={item.icon} size={24} color={theme.colors.text} />
               </View>
               <View style={styles.cardTextContainer}>
                 <Text style={styles.cardTitle}>{item.title}</Text>
                 <Text style={styles.cardDescription}>{item.description}</Text>
               </View>
-              <Ionicons
-                name="chevron-forward-outline"
+              <Icon
+                library="Feather"
+                name="chevron-right"
                 size={20}
                 color={theme.colors.textMuted}
               />
@@ -203,7 +204,7 @@ const createStyles = (theme) =>
       backgroundColor: theme.colors.background,
     },
     scrollContent: {
-      paddingBottom: 32,
+      paddingBottom: 0,
     },
     userInfoSection: {
       alignItems: 'center',

@@ -32,13 +32,6 @@ function RootLayoutNav() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="+not-found"
-          options={{
-            title: 'Sayfa Bulunamadı',
-            headerShown: true,
-          }}
-        />
       </Stack>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <CustomFlashMessage />

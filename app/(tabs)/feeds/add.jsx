@@ -2,21 +2,21 @@ import { router } from 'expo-router';
 import { Formik } from 'formik';
 import React from 'react';
 import {
+    Dimensions,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
     StyleSheet,
-    Text,
-    TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Yup from 'yup';
 import { FlashMessageService } from '../../../components/common/FlashMessage';
+import DetailHeader from '../../../components/detail/DetailHeader';
+import DetailSection from '../../../components/detail/DetailSection';
+import DetailTextInput from '../../../components/forms/DetailTextInput';
+import DetailButton from '../../../components/forms/DetailButton';
 import FormikDatePickerField from '../../../components/forms/FormikDatePickerField';
 import FormikSelectorGrid from '../../../components/forms/FormikSelectorGrid';
-import FormSubmitButton from '../../../components/forms/FormSubmitButton';
-import FormTextInput from '../../../components/forms/FormTextInput';
 import { feedAPI } from '../../../services/api';
 import { useTheme } from '../../../themes';
 
@@ -82,7 +82,14 @@ export default function AddFeedScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container}>
+            <DetailHeader
+                title="Yeni Yem Ekle"
+                subtitle="Yem bilgilerini doldurun"
+                emoji="🌾"
+                gradient={true}
+            />
+
             <Formik
                 initialValues={{
                     feed_name: '',
@@ -100,88 +107,158 @@ export default function AddFeedScreen() {
                 validationSchema={FeedSchema}
                 onSubmit={handleSubmit}
             >
-            {() => (
+            {({ values, isSubmitting, handleSubmit }) => (
                 <KeyboardAvoidingView
                     style={{ flex: 1 }}
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 >
-                    <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-                        <View style={styles.form}>
+                    <ScrollView 
+                        style={styles.scrollView} 
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={styles.scrollContent}
+                    >
+                        {/* Feed Type */}
+                        <DetailSection
+                            title="Yem Türü"
+                            icon={{ library: 'MaterialCommunityIcons', name: 'grain' }}
+                            showDivider={false}
+                        >
                             <FormikSelectorGrid name="feed_type" label="Yem Türü" options={feedTypeOptions} />
-                            
-                            <View style={styles.section}>
-                                <Text style={styles.sectionTitle}>Temel Bilgiler</Text>
-                                <FormTextInput name="feed_name" label="Yem Adı *" placeholder="Örn: Dana Büyütme Yemi" />
-                                <FormTextInput name="brand" label="Marka" placeholder="Yem markası (opsiyonel)" />
-                                <FormTextInput name="quantity" label="Miktar *" placeholder="0" keyboardType="numeric" />
-                                <FormikSelectorGrid name="unit" label="Birim" options={unitOptions} />
-                                <FormTextInput name="purchase_price" label="Toplam Alış Fiyatı (₺)" placeholder="Toplam ödenen tutar" keyboardType="numeric" />
-                            </View>
+                        </DetailSection>
 
-                            <View style={styles.section}>
-                                <Text style={styles.sectionTitle}>Tarihler</Text>
-                                <FormikDatePickerField name="purchase_date" label="Alış Tarihi" asString />
-                                <FormikDatePickerField name="expiry_date" label="Son Kullanma Tarihi" asString />
-                            </View>
+                        {/* Basic Information */}
+                        <DetailSection
+                            title="Temel Bilgiler"
+                            subtitle="Yem özellikleri"
+                            icon={{ library: 'Feather', name: 'info' }}
+                        >
+                            <DetailTextInput 
+                                name="feed_name" 
+                                label="Yem Adı *" 
+                                prefixIcon={{ library: 'Feather', name: 'type' }}
+                                placeholder="Örn: Premium Süt Yemi"
+                                clearable 
+                            />
+                            <DetailTextInput 
+                                name="brand" 
+                                label="Marka" 
+                                prefixIcon={{ library: 'Feather', name: 'tag' }}
+                                placeholder="Örn: Purina"
+                                clearable 
+                            />
+                            <DetailTextInput 
+                                name="quantity" 
+                                label="Miktar *" 
+                                keyboardType="numeric"
+                                prefixIcon={{ library: 'Feather', name: 'hash' }}
+                                placeholder="0"
+                            />
+                            <FormikSelectorGrid name="unit" label="Birim" options={unitOptions} />
+                            <DetailTextInput 
+                                name="purchase_price" 
+                                label="Birim Fiyat" 
+                                keyboardType="numeric"
+                                prefixIcon={{ library: 'Feather', name: 'dollar-sign' }}
+                                placeholder="₺"
+                            />
+                        </DetailSection>
 
-                            <View style={styles.section}>
-                                <Text style={styles.sectionTitle}>Ek Bilgiler</Text>
-                                <FormTextInput name="supplier" label="Tedarikçi" placeholder="Tedarikçi firma adı" />
-                                <FormTextInput name="storage_location" label="Depo Konumu" placeholder="Depolandığı yer" />
-                                <FormTextInput name="notes" label="Notlar" placeholder="Yem hakkında notlar..." multiline numberOfLines={3} />
-                            </View>
+                        {/* Dates */}
+                        <DetailSection
+                            title="Tarih Bilgileri"
+                            subtitle="Alış ve son kullanma tarihleri"
+                            icon={{ library: 'Feather', name: 'calendar' }}
+                            collapsible={true}
+                        >
+                            <FormikDatePickerField name="purchase_date" label="Alış Tarihi" asString />
+                            <FormikDatePickerField name="expiry_date" label="Son Kullanma Tarihi" asString />
+                        </DetailSection>
 
-                            <View style={styles.buttonContainer}>
-                                <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
-                                    <Text style={styles.cancelButtonText}>İptal</Text>
-                                </TouchableOpacity>
-                                <FormSubmitButton title="Yem Ekle" style={styles.submitButton}/>
-                            </View>
+                        {/* Additional Info */}
+                        <DetailSection
+                            title="Ek Bilgiler"
+                            subtitle="Tedarikçi ve depo bilgileri"
+                            icon={{ library: 'Feather', name: 'more-horizontal' }}
+                            collapsible={true}
+                        >
+                            <DetailTextInput 
+                                name="supplier" 
+                                label="Tedarikçi" 
+                                prefixIcon={{ library: 'Feather', name: 'truck' }}
+                                placeholder="Tedarikçi adı"
+                                clearable 
+                            />
+                            <DetailTextInput 
+                                name="storage_location" 
+                                label="Depo Konumu" 
+                                prefixIcon={{ library: 'Feather', name: 'map-pin' }}
+                                placeholder="Depo bölümü"
+                                clearable 
+                            />
+                            <DetailTextInput 
+                                name="notes" 
+                                label="Notlar"
+                                multiline 
+                                numberOfLines={4}
+                                placeholder="Yem hakkında notlarınızı yazın..."
+                                style={{ height: 100, textAlignVertical: 'top' }}
+                            />
+                        </DetailSection>
+
+                        {/* Action Buttons */}
+                        <View style={styles.actionSection}>
+                            <DetailButton
+                                title="Yemi Kaydet"
+                                onPress={handleSubmit}
+                                loading={isSubmitting}
+                                leadingIcon={{ library: 'Feather', name: 'save' }}
+                                fullWidth
+                                size="lg"
+                            />
+
+                            <DetailButton
+                                title="İptal"
+                                variant="outline"
+                                onPress={() => router.back()}
+                                leadingIcon={{ library: 'Feather', name: 'x' }}
+                                fullWidth
+                                style={{ marginTop: theme.spacing.md }}
+                            />
                         </View>
                     </ScrollView>
                 </KeyboardAvoidingView>
             )}
             </Formik>
-        </SafeAreaView>
+        </View>
     );
 }
 
-const getStyles = (theme) => StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: theme.colors.background,
-    },
-    scrollView: {
-        flex: 1,
-    },
-    scrollContent: {
-        paddingBottom: 40,
-    },
-    form: {
-        padding: theme.spacing.lg,
-    },
-    section: {
-        marginVertical: theme.spacing.lg,
-    },
-    sectionTitle: {
-        ...theme.typography.styles.h4,
-        color: theme.colors.text,
-        marginBottom: theme.spacing.lg,
-    },
-    buttonContainer: {
-        flexDirection: 'row',
-        marginTop: theme.spacing.xl,
-        gap: theme.spacing.md,
-    },
-    cancelButton: {
-        ...theme.styles.button('secondary'),
-        flex: 1,
-    },
-    cancelButtonText: {
-        ...theme.styles.text('button'),
-        color: theme.colors.text,
-    },
-    submitButton: {
-        flex: 2,
-    },
-}); 
+const getStyles = (theme) => {
+    const { width } = Dimensions.get('window');
+    const isTablet = width >= 768;
+    
+    return StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: theme.colors.background,
+        },
+        scrollView: {
+            flex: 1,
+        },
+        scrollContent: {
+            paddingHorizontal: isTablet ? theme.spacing.xl : theme.spacing.md,
+            paddingTop: theme.spacing.lg,
+            paddingBottom: theme.spacing.xl,
+            maxWidth: isTablet ? 800 : '100%',
+            alignSelf: isTablet ? 'center' : 'stretch',
+            width: '100%',
+        },
+        actionSection: {
+            paddingHorizontal: theme.spacing.sm,
+            marginTop: theme.spacing.xl,
+            maxWidth: isTablet ? 400 : '100%',
+            alignSelf: 'center',
+            width: '100%',
+        },
+    });
+};
