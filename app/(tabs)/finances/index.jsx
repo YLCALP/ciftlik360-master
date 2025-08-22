@@ -59,11 +59,16 @@ export default function FinancesScreen() {
         startDate = new Date(customRange.start).toISOString().split('T')[0];
         endDate = new Date(customRange.end).toISOString().split('T')[0];
       } else {
-        const start = period === 'year'
-          ? new Date(today.getFullYear(), 0, 1)
-          : new Date(today.getFullYear(), today.getMonth(), 1);
-        startDate = start.toISOString().split('T')[0];
-        endDate = today.toISOString().split('T')[0];
+        if (period === 'year') {
+          const start = new Date(today.getFullYear(), 0, 1);
+          const end = new Date(today.getFullYear(), 11, 31);
+          startDate = start.toISOString().split('T')[0];
+          endDate = end.toISOString().split('T')[0];
+        } else {
+          const start = new Date(today.getFullYear(), today.getMonth(), 1);
+          startDate = start.toISOString().split('T')[0];
+          endDate = today.toISOString().split('T')[0];
+        }
       }
 
       console.log('Date range:', startDate, 'to', endDate);
@@ -127,10 +132,11 @@ export default function FinancesScreen() {
   };
 
   const formatAmount = (amount) => {
-    return new Intl.NumberFormat('tr-TR', {
-      style: 'currency',
-      currency: 'TRY'
+    const formatted = new Intl.NumberFormat('tr-TR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
+    return `${formatted} ₺`;
   };
 
   const handleTransactionPress = useCallback((transaction) => {
@@ -182,8 +188,11 @@ export default function FinancesScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Finansal İşlemler</Text>
+      <View style={styles.headerContainer}>
+        <View>
+          <Text style={styles.title}>Finansal İşlemler</Text>
+          <Text style={styles.subtitle}>{transactions.length} işlem {selectedFilter !== 'all' ? '(filtrelenmiş)' : ''}</Text>
+        </View>
         <View style={styles.headerButtons}>
           <TouchableOpacity
             style={styles.reportButton}
@@ -283,14 +292,14 @@ const createStyles = (theme) => StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  headerContainer: {
+    backgroundColor: theme.colors.background,
     paddingHorizontal: theme.spacing.layout.screenPadding,
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.md,
-    backgroundColor: theme.colors.background,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderLight,
     marginBottom: 0,
@@ -300,6 +309,11 @@ const createStyles = (theme) => StyleSheet.create({
     color: theme.colors.text,
     fontWeight: '700',
   },
+  subtitle: {
+    ...theme.typography.styles.bodySmall,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
+  },
   headerButtons: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
@@ -307,8 +321,8 @@ const createStyles = (theme) => StyleSheet.create({
   reportButton: {
     backgroundColor: theme.colors.success,
     borderWidth: 0,
-    width: theme.spacing.sizes.button.heightSmall,
-    height: theme.spacing.sizes.button.heightSmall,
+    width: theme.spacing.sizes.button.height,
+    height: theme.spacing.sizes.button.height,
     borderRadius: theme.spacing.radius.full,
     justifyContent: 'center',
     alignItems: 'center',
@@ -316,8 +330,8 @@ const createStyles = (theme) => StyleSheet.create({
   },
   addButton: {
     backgroundColor: theme.colors.primary,
-    width: theme.spacing.sizes.button.heightSmall,
-    height: theme.spacing.sizes.button.heightSmall,
+    width: theme.spacing.sizes.button.height,
+    height: theme.spacing.sizes.button.height,
     borderRadius: theme.spacing.radius.full,
     justifyContent: 'center',
     alignItems: 'center',

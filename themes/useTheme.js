@@ -91,6 +91,7 @@ export function useTheme() {
         
         return {
           ...baseStyle,
+          ...theme.typography.styles.input, // Typography stillerini ekle
           backgroundColor: theme.colors.card,
           color: theme.colors.text,
           ...stateStyle,

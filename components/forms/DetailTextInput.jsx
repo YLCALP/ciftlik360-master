@@ -10,6 +10,7 @@ import {
   View
 } from 'react-native';
 import { useTheme } from '../../themes';
+import { formatCurrency, parseCurrency } from '../../utils/currencyFormatter';
 import { Icon } from '../common/Icon';
 
 export default function DetailTextInput({ 
@@ -21,6 +22,7 @@ export default function DetailTextInput({
   clearable = false,
   style,
   containerStyle,
+  formatAsCurrency = false,
   ...props 
 }) {
   const { handleChange, handleBlur, setFieldValue, values, touched, errors } = useFormikContext();
@@ -28,6 +30,9 @@ export default function DetailTextInput({
   const styles = getStyles(theme);
   
   const [isFocused, setIsFocused] = useState(false);
+  const [displayValue, setDisplayValue] = useState(
+    formatAsCurrency && values[name] ? formatCurrency(values[name].toString()) : values[name] || ''
+  );
   const labelAnimation = useRef(new Animated.Value(values[name] ? 1 : 0)).current;
   
   const hasError = touched[name] && errors[name];
@@ -45,8 +50,28 @@ export default function DetailTextInput({
     setIsFocused(true);
   };
 
+  const handleBlurWithName = () => {
+    setIsFocused(false);
+    handleBlur(name);
+  };
+
   const handleClear = () => {
     setFieldValue(name, '');
+    setDisplayValue('');
+  };
+
+  const handleChangeText = (text) => {
+    if (formatAsCurrency) {
+      // Format the input as currency
+      const formatted = formatCurrency(text);
+      setDisplayValue(formatted);
+      // Store the raw numeric value in Formik
+      const numericValue = parseCurrency(formatted);
+      setFieldValue(name, numericValue);
+    } else {
+      setFieldValue(name, text);
+      setDisplayValue(text);
+    }
   };
 
   const getInputState = () => {
@@ -115,9 +140,9 @@ export default function DetailTextInput({
           <TextInput
             style={inputStyles}
             onFocus={handleFocus}
-            onBlur={handleBlur}
-            onChangeText={(text) => setFieldValue(name, text)}
-            value={values[name] || ''}
+            onBlur={handleBlurWithName}
+            onChangeText={handleChangeText}
+            value={formatAsCurrency ? displayValue : values[name] || ''}
             placeholder={isFocused ? placeholder : ''}
             placeholderTextColor={theme.colors.textMuted}
             {...props}
@@ -218,7 +243,7 @@ const getStyles = (theme) => StyleSheet.create({
     zIndex: 1,
   },
   input: {
-    ...theme.typography.styles.body,
+    ...theme.typography.styles.primary,
     color: theme.colors.text,
     paddingTop: 20,
     paddingBottom: 8,

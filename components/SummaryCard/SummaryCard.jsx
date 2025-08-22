@@ -34,7 +34,11 @@ export const SummaryCard = ({
 
   const iconConfig = getIconConfig();
   const cardStyles = isProfitCard 
-    ? [styles.summaryCard, styles.profitCard]
+    ? [
+        styles.summaryCard, 
+        styles.profitCard,
+        amount >= 0 ? styles.profitCardPositive : styles.profitCardNegative
+      ]
     : styles.summaryCard;
 
   const amountStyles = isProfitCard

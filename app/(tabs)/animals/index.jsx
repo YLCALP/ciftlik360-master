@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AnimalCard } from '../../../components/AnimalCard';
 import { FlashMessageService } from '../../../components/common/FlashMessage';
+import { Icon } from '../../../components/common/Icon';
 import { SearchBar } from '../../../components/common/SearchBar';
 import { animalsAPI } from '../../../services/api';
 import { useTheme } from '../../../themes';
@@ -73,7 +74,7 @@ export default function AnimalsScreen() {
               <Text style={styles.subtitle}>{filteredAnimals.length} hayvan listeleniyor</Text>
           </View>
           <TouchableOpacity style={styles.addButton} onPress={handleAddAnimal}>
-              <Text style={styles.addButtonText}>+</Text>
+          <Icon library="Feather" name="plus" size={24} color={theme.colors.primaryText} />
           </TouchableOpacity>
       </View>
 
@@ -137,7 +138,7 @@ const getScreenStyles = (theme) => StyleSheet.create({
   addButton: {
       width: theme.spacing.sizes.button.height,
       height: theme.spacing.sizes.button.height,
-      backgroundColor: theme.colors.accent,
+      backgroundColor: theme.colors.primary,
       borderRadius: theme.spacing.radius.full,
       justifyContent: 'center',
       alignItems: 'center',

@@ -225,12 +225,14 @@ export const Typography = {
       fontWeight: '400',
       lineHeight: 24,
       letterSpacing: 0,
+      fontFamily: 'System',
     },
     placeholder: {
       fontSize: 16,
       fontWeight: '400',
       lineHeight: 24,
       letterSpacing: 0,
+      fontFamily: 'System',
     },
     helperText: {
       fontSize: 12,

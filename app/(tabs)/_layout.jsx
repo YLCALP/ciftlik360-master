@@ -136,6 +136,15 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingHorizontal: 8,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+  },
 });
 
 

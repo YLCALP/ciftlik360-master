@@ -34,7 +34,7 @@ export default function FinancialReportsScreen() {
       
       const currentYear = new Date().getFullYear();
       const startDate = `${currentYear}-01-01`;
-      const endDate = new Date().toISOString().split('T')[0];
+      const endDate = `${currentYear}-12-31`;
 
       const [financialReport, animalProfitReport] = await Promise.all([
         financialAPI.getFinancialReport(startDate, endDate),

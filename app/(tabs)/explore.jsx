@@ -1,16 +1,16 @@
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Icon } from '../../components/common/Icon';
 import {
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashMessageService } from '../../components/common/FlashMessage';
+import { Icon } from '../../components/common/Icon';
 import { useAuth } from '../../contexts/AuthContext';
 import { userAPI } from '../../services/api';
 import { useTheme } from '../../themes/useTheme';
@@ -81,39 +81,9 @@ const SettingsScreen = () => {
       title: 'Çiftlik Bilgileri',
       description: 'Çiftlik adı ve lokasyon ayarları',
       icon: 'home-outline',
-      action: () =>
-        FlashMessageService.info(
-          'Bilgi',
-          'Çiftlik bilgileri sayfası geliştiriliyor...'
-        ),
+      action: () => router.push('/farm/info'),
     },
-    {
-      id: 'notifications',
-      title: 'Bildirimler',
-      description: 'Bildirim ayarlarını yönetin',
-      icon: 'notifications-outline',
-      action: () =>
-        FlashMessageService.info(
-          'Bilgi',
-          'Bildirim ayarları sayfası geliştiriliyor...'
-        ),
-    },
-    {
-      id: 'backup',
-      title: 'Yedekleme & Senkronizasyon',
-      description: 'Verilerinizi yedekleyin',
-      icon: 'cloud-outline',
-      action: () =>
-        FlashMessageService.info('Bilgi', 'Yedekleme sayfası geliştiriliyor...'),
-    },
-    {
-      id: 'help',
-      title: 'Yardım & Destek',
-      description: 'SSS ve iletişim bilgileri',
-      icon: 'help-circle-outline',
-      action: () =>
-        FlashMessageService.info('Bilgi', 'Yardım sayfası geliştiriliyor...'),
-    },
+   
     {
       id: 'about',
       title: 'Uygulama Hakkında',

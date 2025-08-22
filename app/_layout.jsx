@@ -1,8 +1,9 @@
 import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -10,9 +11,8 @@ import { CustomFlashMessage } from '../components/common/FlashMessage';
 import { AuthProvider } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 
-const fonts = {
-  SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-};
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
   const { theme, isThemeLoading } = useTheme();
@@ -32,6 +32,7 @@ function RootLayoutNav() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="farm" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <CustomFlashMessage />
@@ -40,15 +41,24 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts(fonts);
+  const [fontsLoaded, fontError] = useFonts({
+    'SpaceMono': require('../assets/fonts/SpaceMono-Regular.ttf'),
+  });
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
 
   // Handle font loading error
-  if (error) {
-    console.error('Font loading error:', error);
+  if (fontError) {
+    console.error('Font loading error:', fontError);
+    // Continue without the custom font
   }
 
-  // Show loading state only in development
-  if (!loaded) {
+  // Show loading state only if fonts are not loaded and no error
+  if (!fontsLoaded && !fontError) {
     return null;
   }
 
@@ -56,7 +66,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider>
         <AuthProvider>
-          <RootLayoutNav />
+            <RootLayoutNav />
         </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>

@@ -4,13 +4,12 @@ import React from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
-  Dimensions,
   useWindowDimensions,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Yup from 'yup';
@@ -50,8 +49,10 @@ export default function SignInScreen() {
   const styles = getStyles(theme, { width, height, isTablet, isLargeScreen, isLandscape });
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
+    <>
+      <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
+      <SafeAreaView style={styles.container}>
+        <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.contentContainer}>
@@ -101,7 +102,8 @@ export default function SignInScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </>
   );
 }
 

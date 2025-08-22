@@ -219,7 +219,7 @@ export const Spacing = {
 
     // Input field sizes - iOS optimized
     input: {
-      height: 50,        // iOS için artırıldı
+      height: 60,        // iOS için artırıldı
       heightSmall: 44,   // iOS için minimum dokunabilir alan
       heightLarge: 56,
       minHeight: 50,     // iOS için minimum yükseklik

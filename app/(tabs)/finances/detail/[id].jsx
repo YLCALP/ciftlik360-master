@@ -241,26 +241,6 @@ export default function FinancialTransactionDetailScreen() {
             </View>
           </View>
         </DetailSection>
-
-        {/* Action Buttons */}
-        <View style={styles.actionSection}>
-          <DetailButton
-            title="İşlemi Düzenle"
-            variant="outline"
-            leadingIcon={{ library: 'Feather', name: 'edit-3' }}
-            fullWidth
-            onPress={() => router.push(`/finances/edit/${id}`)}
-          />
-
-          <DetailButton
-            title="Benzer İşlem Ekle"
-            variant="secondary"
-            leadingIcon={{ library: 'Feather', name: 'copy' }}
-            fullWidth
-            style={{ marginTop: theme.spacing.md }}
-            onPress={() => router.push(`/finances/add?template=${id}`)}
-          />
-        </View>
       </ScrollView>
     </View>
   );

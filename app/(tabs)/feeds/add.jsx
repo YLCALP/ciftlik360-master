@@ -1,20 +1,21 @@
 import { router } from 'expo-router';
 import { Formik } from 'formik';
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
     Dimensions,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
     StyleSheet,
+    Text,
     View,
 } from 'react-native';
 import * as Yup from 'yup';
 import { FlashMessageService } from '../../../components/common/FlashMessage';
 import DetailHeader from '../../../components/detail/DetailHeader';
 import DetailSection from '../../../components/detail/DetailSection';
-import DetailTextInput from '../../../components/forms/DetailTextInput';
 import DetailButton from '../../../components/forms/DetailButton';
+import DetailTextInput from '../../../components/forms/DetailTextInput';
 import FormikDatePickerField from '../../../components/forms/FormikDatePickerField';
 import FormikSelectorGrid from '../../../components/forms/FormikSelectorGrid';
 import { feedAPI } from '../../../services/api';
@@ -25,7 +26,8 @@ const FeedSchema = Yup.object().shape({
   feed_type: Yup.string().required(),
   quantity: Yup.number().required('Miktar zorunludur').typeError('Miktar sayı olmalıdır'),
   unit: Yup.string().required(),
-  purchase_price: Yup.number().typeError('Fiyat sayı olmalıdır'),
+  purchase_price: Yup.number().typeError('Toplam alış fiyatı sayı olmalıdır'),
+  price_per_unit: Yup.number().typeError('Birim fiyat sayı olmalıdır'),
   purchase_date: Yup.string().matches(/^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[012])\.\d{4}$/, 'Geçersiz tarih formatı. GG.AA.YYYY kullanın'),
   expiry_date: Yup.string().matches(/^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[012])\.\d{4}$/, 'Geçersiz tarih formatı. GG.AA.YYYY kullanın'),
 });
@@ -43,6 +45,24 @@ const unitOptions = [
     { value: 'bag', label: 'Çuval' },
     { value: 'liter', label: 'Litre' },
 ];
+
+// Component to handle automatic calculation
+const PriceCalculator = ({ values, setFieldValue }) => {
+    useEffect(() => {
+        if (values.purchase_price && values.quantity) {
+            const totalPrice = parseFloat(values.purchase_price);
+            const quantity = parseFloat(values.quantity);
+            if (quantity > 0 && !isNaN(totalPrice) && !isNaN(quantity)) {
+                const unitPrice = (totalPrice / quantity).toFixed(2);
+                setFieldValue('price_per_unit', unitPrice);
+            }
+        } else {
+            setFieldValue('price_per_unit', '');
+        }
+    }, [values.purchase_price, values.quantity, setFieldValue]);
+    
+    return null;
+};
 
 export default function AddFeedScreen() {
     const theme = useTheme();
@@ -67,6 +87,7 @@ export default function AddFeedScreen() {
                 ...rest,
                 quantity: parseFloat(values.quantity),
                 purchase_price: values.purchase_price ? parseFloat(values.purchase_price) : 0,
+                price_per_unit: values.price_per_unit ? parseFloat(values.price_per_unit) : 0,
                 purchase_date: formatDateForDB(purchase_date),
                 expiry_date: formatDateForDB(expiry_date),
             };
@@ -98,6 +119,7 @@ export default function AddFeedScreen() {
                     quantity: '',
                     unit: 'kg',
                     purchase_price: '',
+                    price_per_unit: '',
                     purchase_date: '',
                     expiry_date: '',
                     supplier: '',
@@ -107,7 +129,9 @@ export default function AddFeedScreen() {
                 validationSchema={FeedSchema}
                 onSubmit={handleSubmit}
             >
-            {({ values, isSubmitting, handleSubmit }) => (
+            {({ values, isSubmitting, handleSubmit, setFieldValue }) => (
+                <>
+                <PriceCalculator values={values} setFieldValue={setFieldValue} />
                 <KeyboardAvoidingView
                     style={{ flex: 1 }}
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -123,7 +147,7 @@ export default function AddFeedScreen() {
                             icon={{ library: 'MaterialCommunityIcons', name: 'grain' }}
                             showDivider={false}
                         >
-                            <FormikSelectorGrid name="feed_type" label="Yem Türü" options={feedTypeOptions} />
+                            <FormikSelectorGrid name="feed_type"  options={feedTypeOptions} />
                         </DetailSection>
 
                         {/* Basic Information */}
@@ -156,11 +180,23 @@ export default function AddFeedScreen() {
                             <FormikSelectorGrid name="unit" label="Birim" options={unitOptions} />
                             <DetailTextInput 
                                 name="purchase_price" 
-                                label="Birim Fiyat" 
+                                label="Toplam Alış Fiyatı" 
                                 keyboardType="numeric"
-                                prefixIcon={{ library: 'Feather', name: 'dollar-sign' }}
-                                placeholder="₺"
+                                prefixIcon={{ library: 'FontAwesome5', name: 'lira-sign' }}
+                                placeholder="0.00"
+                                formatAsCurrency={true}
                             />
+                            <View style={styles.calculatedField}>
+                                <Text style={styles.calculatedLabel}>Birim Fiyat (Otomatik Hesaplanır)</Text>
+                                <View style={styles.calculatedValue}>
+                                    <Text style={styles.calculatedText}>
+                                        {values.price_per_unit ? `${new Intl.NumberFormat('tr-TR', {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2,
+                                        }).format(values.price_per_unit)} ₺/${unitOptions.find(u => u.value === values.unit)?.label || values.unit}` : '0,00 ₺'}
+                                    </Text>
+                                </View>
+                            </View>
                         </DetailSection>
 
                         {/* Dates */}
@@ -227,6 +263,7 @@ export default function AddFeedScreen() {
                         </View>
                     </ScrollView>
                 </KeyboardAvoidingView>
+                </>
             )}
             </Formik>
         </View>
@@ -259,6 +296,30 @@ const getStyles = (theme) => {
             maxWidth: isTablet ? 400 : '100%',
             alignSelf: 'center',
             width: '100%',
+        },
+        calculatedField: {
+            marginTop: theme.spacing.md,
+            marginBottom: theme.spacing.md,
+        },
+        calculatedLabel: {
+            ...theme.typography.styles.label,
+            color: theme.colors.textSecondary,
+            marginBottom: theme.spacing.sm,
+            fontWeight: '600',
+        },
+        calculatedValue: {
+            backgroundColor: theme.colors.surface,
+            borderRadius: theme.spacing.radius.lg,
+            padding: theme.spacing.md,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            borderStyle: 'dashed',
+        },
+        calculatedText: {
+            ...theme.typography.styles.bodyLarge,
+            color: theme.colors.primary,
+            fontWeight: '700',
+            textAlign: 'center',
         },
     });
 };
