@@ -17,9 +17,9 @@ export const iconMappings = {
       focusedName: 'barley'
     },
     finances: {
-      library: 'Feather',
-      name: 'dollar-sign',
-      focusedName: 'dollar-sign'
+      library: 'FontAwesome5',
+      name: 'lira-sign',
+      focusedName: 'lira-sign'
     },
     profile: {
       library: 'Feather',

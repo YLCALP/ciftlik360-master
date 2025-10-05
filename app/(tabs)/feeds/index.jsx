@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedCard } from '../../../components/FeedCard';
+import { Icon } from '../../../components/common/Icon';
 import { SearchBar } from '../../../components/common/SearchBar';
 import { feedAPI } from '../../../services/api';
 import { useTheme } from '../../../themes';
@@ -107,7 +108,7 @@ export default function FeedsScreen() {
           <Text style={styles.subtitle}>{filteredFeeds.length} yem {searchText ? '(filtrelenmiş)' : ''}</Text>
         </View>
         <TouchableOpacity style={styles.addButton} onPress={handleAddFeed}>
-          <Text style={styles.addButtonText}>+</Text>
+        <Icon library="Feather" name="plus" size={24} color={theme.colors.primaryText} />
         </TouchableOpacity>
       </View>
 
@@ -179,7 +180,7 @@ const getScreenStyles = (theme) => StyleSheet.create({
   addButton: {
     width: theme.spacing.sizes.button.height,
     height: theme.spacing.sizes.button.height,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: theme.colors.primary,
     borderRadius: theme.spacing.radius.full,
     justifyContent: 'center',
     alignItems: 'center',

@@ -44,6 +44,24 @@ const unitOptions = [
     { value: 'liter', label: 'Litre' },
 ];
 
+// Component to handle automatic calculation
+const PriceCalculator = ({ values, setFieldValue }) => {
+    useEffect(() => {
+        if (values.purchase_price && values.quantity) {
+            const totalPrice = parseFloat(values.purchase_price);
+            const quantity = parseFloat(values.quantity);
+            if (quantity > 0 && !isNaN(totalPrice) && !isNaN(quantity)) {
+                const unitPrice = (totalPrice / quantity).toFixed(2);
+                setFieldValue('price_per_unit', unitPrice);
+            }
+        } else {
+            setFieldValue('price_per_unit', '');
+        }
+    }, [values.purchase_price, values.quantity, setFieldValue]);
+    
+    return null;
+};
+
 export default function FeedDetailScreen() {
     const { id } = useLocalSearchParams();
     const [feed, setFeed] = useState(null);
@@ -67,6 +85,7 @@ export default function FeedDetailScreen() {
                     expiry_date: formatDateForInput(foundFeed.expiry_date),
                     quantity: String(foundFeed.quantity || ''),
                     price_per_unit: String(foundFeed.price_per_unit || ''),
+                    purchase_price: String(foundFeed.purchase_price || ''),
                 });
             } else {
                 FlashMessageService.error('Hata', 'Yem bulunamadı.');
@@ -99,6 +118,7 @@ export default function FeedDetailScreen() {
                 expiry_date: formatDateForDB(values.expiry_date),
                 quantity: parseFloat(values.quantity || 0),
                 price_per_unit: parseFloat(values.price_per_unit || 0),
+                purchase_price: parseFloat(values.purchase_price || 0),
             };
 
             await feedAPI.updateFeed(id, updateData);
@@ -159,8 +179,9 @@ export default function FeedDetailScreen() {
                 onSubmit={handleSave}
                 enableReinitialize
             >
-                {({ values, isSubmitting, handleSubmit }) => (
+                {({ values, isSubmitting, handleSubmit, setFieldValue }) => (
                     <>
+                        <PriceCalculator values={values} setFieldValue={setFieldValue} />
                         <DetailHeader
                             title={values.feed_name || 'Yem Detayı'}
                             subtitle={values.brand ? `${values.brand}` : 'Yem Bilgileri'}
@@ -180,30 +201,7 @@ export default function FeedDetailScreen() {
                             showsVerticalScrollIndicator={false}
                             contentContainerStyle={styles.scrollContent}
                         >
-                            {/* Stock Status */}
-                            <DetailSection
-                                title="Stok Durumu"
-                                subtitle={`Mevcut: ${values.quantity} ${values.unit}`}
-                                icon={{ library: 'Feather', name: 'package' }}
-                                showDivider={false}
-                            >
-                                <View style={styles.stockContainer}>
-                                    <View style={styles.stockBar}>
-                                        <View 
-                                            style={[
-                                                styles.stockProgress,
-                                                { 
-                                                    width: `${stockPercentage}%`,
-                                                    backgroundColor: isOutOfStock ? theme.colors.error : isLowStock ? theme.colors.warning : theme.colors.success
-                                                }
-                                            ]} 
-                                        />
-                                    </View>
-                                    <Text style={styles.stockText}>
-                                        {stockPercentage.toFixed(0)}% Stok Seviyesi
-                                    </Text>
-                                </View>
-                            </DetailSection>
+                       
 
                             {/* Feed Type */}
                             <DetailSection
@@ -211,7 +209,7 @@ export default function FeedDetailScreen() {
                                 icon={{ library: 'MaterialCommunityIcons', name: 'grain' }}
                                 showDivider={false}
                             >
-                                <FormikSelectorGrid name="feed_type" label="Yem Türü" options={feedTypeOptions} />
+                                <FormikSelectorGrid name="feed_type"  options={feedTypeOptions} />
                             </DetailSection>
 
                             {/* Basic Information */}
@@ -242,12 +240,24 @@ export default function FeedDetailScreen() {
                                 />
                                 <FormikSelectorGrid name="unit" label="Birim" options={unitOptions} />
                                 <DetailTextInput 
-                                    name="price_per_unit" 
-                                    label="Birim Fiyat" 
+                                    name="purchase_price" 
+                                    label="Toplam Alış Fiyatı" 
                                     keyboardType="numeric"
-                                    prefixIcon={{ library: 'Feather', name: 'dollar-sign' }}
-                                    placeholder="₺"
+                                    prefixIcon={{ library: 'FontAwesome5', name: 'lira-sign' }}
+                                    placeholder="0.00"
+                                    formatAsCurrency={true}
                                 />
+                                <View style={styles.calculatedField}>
+                                    <Text style={styles.calculatedLabel}>Birim Fiyat</Text>
+                                    <View style={styles.calculatedValue}>
+                                        <Text style={styles.calculatedText}>
+                                            {values.price_per_unit ? `${new Intl.NumberFormat('tr-TR', {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2,
+                                            }).format(values.price_per_unit)} ₺/${unitOptions.find(u => u.value === values.unit)?.label || values.unit}` : '0,00 ₺'}
+                                        </Text>
+                                    </View>
+                                </View>
                             </DetailSection>
 
                             {/* Dates */}
@@ -384,6 +394,30 @@ const getStyles = (theme) => {
         maxWidth: isTablet ? 400 : '100%',
         alignSelf: 'center',
         width: '100%',
+    },
+    calculatedField: {
+        marginTop: theme.spacing.md,
+        marginBottom: theme.spacing.md,
+    },
+    calculatedLabel: {
+        ...theme.typography.styles.label,
+        color: theme.colors.textSecondary,
+        marginBottom: theme.spacing.sm,
+        fontWeight: '600',
+    },
+    calculatedValue: {
+        backgroundColor: theme.colors.surface,
+        borderRadius: theme.spacing.radius.lg,
+        padding: theme.spacing.md,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        borderStyle: 'dashed',
+    },
+    calculatedText: {
+        ...theme.typography.styles.bodyLarge,
+        color: theme.colors.primary,
+        fontWeight: '700',
+        textAlign: 'center',
     },
   });
 };

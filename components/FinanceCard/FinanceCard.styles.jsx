@@ -8,8 +8,13 @@ export const getFinanceCardStyles = (theme) => StyleSheet.create({
     marginBottom: theme.spacing.component.card.marginSmall,
     borderWidth: 0,
     borderLeftWidth: 4,
-    borderLeftColor: theme.colors.primary,
     ...theme.spacing.shadows.md,
+  },
+  incomeCard: {
+    borderLeftColor: theme.colors.success,
+  },
+  expenseCard: {
+    borderLeftColor: theme.colors.error,
   },
   transactionHeader: {
     flexDirection: 'row',

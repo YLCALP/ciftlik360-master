@@ -1,8 +1,7 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   Animated,
   Dimensions,
-  LayoutAnimation,
   Platform,
   StyleSheet,
   Text,
@@ -30,30 +29,55 @@ export default function DetailSection({
   const theme = useTheme();
   const styles = getStyles(theme);
   
-  const [expanded, setExpanded] = useState(initiallyExpanded);
-  const rotationAnimation = useRef(new Animated.Value(initiallyExpanded ? 1 : 0)).current;
+  // Collapsible olmayan componentler her zaman expanded
+  // Collapsible olanlar varsayılan true (kullanıcı deneyimi için)
+  const shouldExpand = collapsible ? initiallyExpanded : true;
+  const [expanded, setExpanded] = useState(shouldExpand);
+  const [contentHeight, setContentHeight] = useState(0);
+  
+  // Separate animations with dedicated values
+  const rotationAnimation = useRef(new Animated.Value(shouldExpand ? 1 : 0)).current;
+  const heightAnimation = useRef(new Animated.Value(shouldExpand ? 1 : 0)).current;
+  const opacityAnimation = useRef(new Animated.Value(shouldExpand ? 1 : 0)).current;
+
 
   const handleToggle = () => {
     if (!collapsible) return;
     
     const newExpanded = !expanded;
-    
-    // iOS smooth animation
-    if (Platform.OS === 'ios') {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    }
-    
     setExpanded(newExpanded);
     
-    // Rotate arrow animation
+    // Run animations sequentially to avoid driver conflicts
+    // Arrow rotation (can use native driver separately)
     Animated.timing(rotationAnimation, {
       toValue: newExpanded ? 1 : 0,
-      duration: 200,
+      duration: 300,
       useNativeDriver: true,
     }).start();
+    
+    // Height + opacity together (JS driver only)
+    Animated.parallel([
+      Animated.timing(heightAnimation, {
+        toValue: newExpanded ? 1 : 0,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+      Animated.timing(opacityAnimation, {
+        toValue: newExpanded ? 1 : 0,
+        duration: newExpanded ? 350 : 250,
+        useNativeDriver: false,
+      })
+    ]).start();
 
     if (onToggle) {
       onToggle(newExpanded);
+    }
+  };
+
+  const onContentLayout = (event) => {
+    const { height } = event.nativeEvent.layout;
+    if (height > 0 && (contentHeight === 0 || Math.abs(contentHeight - height) > 5)) {
+      setContentHeight(height);
     }
   };
 
@@ -61,6 +85,13 @@ export default function DetailSection({
     inputRange: [0, 1],
     outputRange: ['0deg', '180deg'],
   });
+
+  const animatedHeight = heightAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, Math.max(contentHeight, 200)], // More reasonable fallback
+  });
+
+  const animatedOpacity = opacityAnimation;
 
   return (
     <View style={[styles.container, style]} {...props}>
@@ -114,16 +145,38 @@ export default function DetailSection({
         </View>
       </TouchableOpacity>
 
-      {/* Content */}
-      {expanded && (
-        <View style={[styles.content, contentStyle]}>
-          {children}
-        </View>
-      )}
-
-      {/* Divider */}
-      {showDivider && expanded && (
-        <View style={styles.divider} />
+      {/* Content with smooth animation */}
+      {collapsible ? (
+        <Animated.View 
+          style={{
+            height: animatedHeight,
+            opacity: animatedOpacity,
+            overflow: 'hidden',
+          }}
+        >
+          <View 
+            style={[styles.content, contentStyle]}
+            onLayout={onContentLayout}
+          >
+            {children}
+          </View>
+          
+          {/* Divider */}
+          {showDivider && (
+            <View style={styles.divider} />
+          )}
+        </Animated.View>
+      ) : (
+        <>
+          <View style={[styles.content, contentStyle]}>
+            {children}
+          </View>
+          
+          {/* Divider */}
+          {showDivider && (
+            <View style={styles.divider} />
+          )}
+        </>
       )}
     </View>
   );

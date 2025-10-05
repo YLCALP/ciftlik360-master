@@ -196,8 +196,9 @@ export default function AddAnimalScreen() {
                                 name="purchase_price" 
                                 label="Alış Fiyatı" 
                                 keyboardType="numeric"
-                                prefixIcon={{ library: 'Feather', name: 'dollar-sign' }}
-                                placeholder="₺"
+                                prefixIcon={{ library: 'FontAwesome5', name: 'lira-sign' }}
+                                placeholder="0.00"
+                                formatAsCurrency={true}
                             />
                             <FormikDatePickerField name="purchase_date" label="Alış Tarihi" asString />
                         </DetailSection>

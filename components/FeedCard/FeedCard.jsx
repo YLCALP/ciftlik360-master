@@ -27,6 +27,16 @@ export const FeedCard = React.memo(({ feed, onPress }) => {
     return texts[feedType] || feedType;
   };
 
+  const getUnitLabel = (unit) => {
+    const unitLabels = {
+      kg: 'Kilogram',
+      ton: 'Ton',
+      bag: 'Çuval',
+      liter: 'Litre',
+    };
+    return unitLabels[unit] || unit;
+  };
+
   const getStockStatus = (quantity, minStock) => {
     if (quantity <= 0) {
       return { 
@@ -56,10 +66,11 @@ export const FeedCard = React.memo(({ feed, onPress }) => {
 
   const formatCurrency = (amount) => {
     if (!amount) return '-';
-    return new Intl.NumberFormat('tr-TR', {
-      style: 'currency',
-      currency: 'TRY',
+    const formatted = new Intl.NumberFormat('tr-TR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
+    return `${formatted} ₺`;
   };
 
   const stockStatus = getStockStatus(feed.quantity, feed.min_stock_level || 0);
@@ -101,7 +112,7 @@ export const FeedCard = React.memo(({ feed, onPress }) => {
         <View style={styles.metaItem}>
           <Text style={styles.metaLabel}>Miktar</Text>
           <Text style={styles.metaValue}>
-            {feed.quantity} {feed.unit}
+            {feed.quantity} {getUnitLabel(feed.unit)}
           </Text>
         </View>
         <View style={styles.metaItem}>

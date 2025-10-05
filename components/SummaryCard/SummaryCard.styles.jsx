@@ -29,7 +29,12 @@ export const getSummaryCardStyles = (theme) => StyleSheet.create({
   profitCard: {
     marginBottom: 0,
     borderLeftWidth: 4,
+  },
+  profitCardPositive: {
     borderLeftColor: theme.colors.success,
+  },
+  profitCardNegative: {
+    borderLeftColor: theme.colors.error,
   },
   profitAmount: {
     fontSize: theme.typography.sizes['4xl'],

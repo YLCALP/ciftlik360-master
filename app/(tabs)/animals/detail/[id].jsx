@@ -86,7 +86,12 @@ export default function AnimalDetailScreen() {
 
   useEffect(() => { loadAnimal(); }, [loadAnimal]);
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const handleSave = async (values, { setSubmitting }) => {
+    if (isSaving) return; // Prevent double submission
+    
+    setIsSaving(true);
     try {
         const formatDateForDB = (dateStr) => {
             if (!dateStr || !dateStr.trim()) return null;
@@ -115,6 +120,7 @@ export default function AnimalDetailScreen() {
         FlashMessageService.error('Hata', 'Hayvan güncellenirken bir hata oluştu.');
     } finally {
         setSubmitting(false);
+        setIsSaving(false);
     }
   };
   
@@ -160,7 +166,10 @@ export default function AnimalDetailScreen() {
         onSubmit={handleSave}
         enableReinitialize
       >
-        {({ values, isSubmitting, handleSubmit }) => (
+        {({ values, isSubmitting, handleSubmit }) => {
+          const isReadOnly = values.status === 'sold' || values.status === 'deceased';
+          
+          return (
           <>
             <DetailHeader
               title={values.name || values.tag_number}
@@ -172,7 +181,7 @@ export default function AnimalDetailScreen() {
               }}
               rightActions={[
                 {
-                  icon: { library: 'Feather', name: 'dollar-sign' },
+                  icon: { library: 'FontAwesome5', name: 'lira-sign' },
                   onPress: () => router.push(`/finances?animalId=${id}`)
                 }
               ]}
@@ -190,7 +199,7 @@ export default function AnimalDetailScreen() {
                 icon={{ library: 'MaterialCommunityIcons', name: 'cow' }}
                 showDivider={false}
               >
-                <FormikSelectorGrid name="species" label="Hayvan Türü" options={speciesOptions} />
+                <FormikSelectorGrid name="species" label="Hayvan Türü" options={speciesOptions} disabled={isReadOnly} />
               </DetailSection>
 
               {/* Basic Information */}
@@ -204,6 +213,7 @@ export default function AnimalDetailScreen() {
                   label="Küpe Numarası *" 
                   prefixIcon={{ library: 'Feather', name: 'tag' }}
                   clearable 
+                  editable={!isReadOnly}
                 />
                 <DetailTextInput 
                   name="name" 
@@ -211,14 +221,16 @@ export default function AnimalDetailScreen() {
                   prefixIcon={{ library: 'Feather', name: 'type' }}
                   placeholder="Örn: Papatya"
                   clearable 
+                  editable={!isReadOnly}
                 />
-                <FormikSelectorGrid name="gender" label="Cinsiyet" options={genderOptions} />
-                <FormikDatePickerField name="birth_date" label="Doğum Tarihi" asString />
+                <FormikSelectorGrid name="gender" label="Cinsiyet" options={genderOptions} disabled={isReadOnly} />
+                <FormikDatePickerField name="birth_date" label="Doğum Tarihi" asString disabled={isReadOnly} />
                 <DetailTextInput 
                   name="breed" 
                   label="Irk" 
                   placeholder="Örn: Holstein"
                   clearable 
+                  editable={!isReadOnly}
                 />
                 <DetailTextInput 
                   name="weight" 
@@ -226,6 +238,7 @@ export default function AnimalDetailScreen() {
                   keyboardType="numeric"
                   suffixIcon={{ library: 'Feather', name: 'trending-up' }}
                   placeholder="kg"
+                  editable={!isReadOnly}
                 />
               </DetailSection>
 
@@ -248,10 +261,12 @@ export default function AnimalDetailScreen() {
                   name="purchase_price" 
                   label="Alış Fiyatı" 
                   keyboardType="numeric"
-                  prefixIcon={{ library: 'Feather', name: 'dollar-sign' }}
-                  placeholder="₺"
+                  prefixIcon={{ library: 'FontAwesome5', name: 'lira-sign' }}
+                  placeholder="0.00"
+                  formatAsCurrency={true}
+                  editable={!isReadOnly}
                 />
-                <FormikDatePickerField name="purchase_date" label="Alış Tarihi" asString />
+                <FormikDatePickerField name="purchase_date" label="Alış Tarihi" asString disabled={isReadOnly} />
               </DetailSection>
 
               {/* Notes */}
@@ -268,15 +283,17 @@ export default function AnimalDetailScreen() {
                   numberOfLines={4}
                   placeholder="Hayvan hakkında notlarınızı yazın..."
                   style={{ height: 100, textAlignVertical: 'top' }}
+                  editable={!isReadOnly}
                 />
               </DetailSection>
 
               {/* Action Buttons */}
               <View style={styles.actionSection}>
                 <DetailButton
-                  title="Değişiklikleri Kaydet"
+                  title={isReadOnly ? "Düzenleme Kapalı" : "Değişiklikleri Kaydet"}
                   onPress={handleSubmit}
-                  loading={isSubmitting}
+                  loading={isSubmitting || isSaving}
+                  disabled={isReadOnly || isSubmitting || isSaving}
                   leadingIcon={{ library: 'Feather', name: 'save' }}
                   fullWidth
                   size="lg"
@@ -286,14 +303,15 @@ export default function AnimalDetailScreen() {
                   title="Finansal İşlemler"
                   variant="outline"
                   onPress={() => router.push(`/finances?animalId=${id}`)}
-                  leadingIcon={{ library: 'Feather', name: 'dollar-sign' }}
+                  leadingIcon={{ library: 'FontAwesome5', name: 'lira-sign' }}
                   fullWidth
                   style={{ marginTop: theme.spacing.md }}
                 />
               </View>
             </ScrollView>
           </>
-        )}
+          );
+        }}
       </Formik>
     </View>
   );

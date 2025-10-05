@@ -1,6 +1,6 @@
 import { useFormikContext } from 'formik';
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, View, Platform } from 'react-native';
+import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTheme } from '../../themes';
 
 export default function AuthTextInput({ name, label, style, ...props }) {
@@ -33,6 +33,13 @@ export default function AuthTextInput({ name, label, style, ...props }) {
         placeholderTextColor={theme.colors.textMuted}
         textContentType={getTextContentType(name)}
         autoComplete={getAutoComplete(name)}
+        scrollEnabled={false}
+        multiline={false}
+        textAlignVertical="center"
+        numberOfLines={1}
+        maxLength={100}
+        editable={true}
+        selectTextOnFocus={false}
         {...props}
       />
       {hasError && <Text style={styles.errorText}>{errors[name]}</Text>}
@@ -70,10 +77,14 @@ const getStyles = (theme) => StyleSheet.create({
   },
   // iOS için özel input stilleri
   iosInput: {
-    height: 52,          // iOS'ta daha yüksek
+    height: 60,          // iOS'ta daha yüksek
     paddingVertical: 18, // iOS'ta daha fazla dikey padding
     paddingHorizontal: 20, // iOS'ta daha fazla yatay padding  
     fontSize: 16,        // iOS'ta zoom engellemek için minimum 16px
     lineHeight: 20,      // iOS'ta daha iyi hizalama
+    fontFamily: 'System', // Sistem fontunu zorla
+    textAlignVertical: 'center', // Android için center alignment
+    includeFontPadding: false,   // Android için font padding'i kaldır
+    textAlign: 'left',           // Explicit text alignment
   },
 }); 

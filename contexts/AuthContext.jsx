@@ -67,14 +67,23 @@ export function AuthProvider({ children }) {
   const signUp = useCallback(async (email, password, userData = {}) => {
     try {
       setError(null);
-      const { data, error } = await supabase.auth.signUp({
+      
+      // Create the user account with metadata (trigger will handle farm creation)
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: userData,
         },
       });
-      return { data, error };
+      
+      if (authError) {
+        return { data: null, error: authError };
+      }
+      
+      // Note: The users table record and farm will be created automatically by triggers
+      
+      return { data: authData, error: null };
     } catch (err) {
       console.error('Sign up error:', err);
       setError(err.message);

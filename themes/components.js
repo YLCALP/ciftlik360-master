@@ -1,12 +1,6 @@
-/**
- * Component Style Definitions
- * Reusable component styles for consistent UI across Çiftlik365
- */
-
 import { Spacing } from './spacing';
 
 export const ComponentStyles = {
-  // Button variants - iOS & Android optimized
   button: {
     base: {
       height: Spacing.sizes.button.height,
@@ -19,7 +13,6 @@ export const ComponentStyles = {
       minWidth: Spacing.sizes.button.minWidth,
     },
     primary: {
-      // Colors will be applied from theme
     },
     secondary: {
       borderWidth: 1,
@@ -45,7 +38,6 @@ export const ComponentStyles = {
     },
   },
 
-  // Input variants - iOS optimized
   input: {
     base: {
       height: Spacing.sizes.input.height,
@@ -55,6 +47,7 @@ export const ComponentStyles = {
       borderWidth: 1,
       fontSize: 16,
       minHeight: Spacing.sizes.input.minHeight,
+      textAlign: 'left',           
     },
     small: {
       height: Spacing.sizes.inputSmallHeight,
@@ -69,7 +62,6 @@ export const ComponentStyles = {
     },
   },
 
-  // Card variants
   card: {
     base: {
       padding: Spacing.component.cardPadding,
@@ -93,7 +85,6 @@ export const ComponentStyles = {
     },
   },
 
-  // List item variants
   listItem: {
     base: {
       paddingVertical: Spacing.component.listItemVertical,
@@ -111,7 +102,6 @@ export const ComponentStyles = {
     },
   },
 
-  // Avatar variants
   avatar: {
     base: {
       borderRadius: Spacing.radius.full,
@@ -140,7 +130,6 @@ export const ComponentStyles = {
     },
   },
 
-  // Badge variants
   badge: {
     base: {
       paddingHorizontal: 8,
@@ -161,7 +150,6 @@ export const ComponentStyles = {
     },
   },
 
-  // Modal/Sheet variants
   modal: {
     base: {
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -235,7 +223,6 @@ export const ComponentStyles = {
     },
   },
 
-  // Screen container
   screen: {
     base: {
       flex: 1,

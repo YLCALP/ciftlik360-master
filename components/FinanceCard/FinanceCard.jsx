@@ -33,10 +33,11 @@ export const FinanceCard = React.memo(({ transaction, onPress }) => {
   };
 
   const formatAmount = (amount) => {
-    return new Intl.NumberFormat('tr-TR', {
-      style: 'currency',
-      currency: 'TRY'
+    const formatted = new Intl.NumberFormat('tr-TR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
+    return `${formatted} ₺`;
   };
 
   const handlePress = () => {
@@ -45,7 +46,10 @@ export const FinanceCard = React.memo(({ transaction, onPress }) => {
 
   return (
     <TouchableOpacity 
-      style={styles.transactionCard}
+      style={[
+        styles.transactionCard,
+        transaction.type === 'income' ? styles.incomeCard : styles.expenseCard
+      ]}
       onPress={handlePress}
       activeOpacity={0.8}
     >
